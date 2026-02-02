@@ -295,13 +295,7 @@
     <script>
         // --- ⚙️ ENTERPRISE CONFIGURATION ---
         const CONFIG = {
-            // Your Real Logo (Direct Link)
             logo: "https://cdn.discordapp.com/icons/1467910208796758231/fcfe701db117f2cef9e9b8350a1fc8d8.webp?size=1024",
-            
-            // System Owner (For "About" section)
-            owner: "Fahad Malik",
-            
-            // Current User Display (Visitor Friendly)
             currentUser: "Guest User"
         };
 
@@ -318,7 +312,6 @@
                 boot.style.opacity = '0';
                 setTimeout(() => {
                     boot.remove();
-                    // Visitor Friendly Greeting
                     showToast('System Online: Visitor Access', 'shield-check');
                 }, 1000);
             }, 1800);
@@ -461,8 +454,12 @@
             
             if (activeApps[key]) {
                 const win = activeApps[key].window;
-                if (win.style.opacity === '0') restoreWindow(key);
-                else {
+                // FIX: Check for CSS class 'open' instead of inline opacity
+                const isOpen = win.classList.contains('open');
+
+                if (!isOpen) {
+                    restoreWindow(key);
+                } else {
                     if(win.classList.contains('active')) minimizeWindow(key);
                     else focusWindow(win);
                 }
