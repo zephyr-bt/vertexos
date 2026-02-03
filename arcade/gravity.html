@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravity Jet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;800&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'JetBrains Mono', monospace; user-select: none; }
+        canvas { display: block; }
+        
+        /* UI OVERLAY */
+        #ui {
+            position: absolute; inset: 0; pointer-events: none;
+            display: flex; justify-content: center; align-items: center; z-index: 10;
+        }
+
+        /* HUD */
+        #hud {
+            position: absolute; top: 20px; left: 20px;
+            font-size: 20px; font-weight: bold; color: white;
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+        }
+
+        /* MENU SCREEN */
+        #menu {
+            background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(12px);
+            padding: 40px; border-radius: 20px; border: 1px solid rgba(59, 130, 246, 0.3);
+            text-align: center; pointer-events: auto;
+            box-shadow: 0 0 50px rgba(59, 130, 246, 0.2);
+            transition: 0.2s; opacity: 1; transform: scale(1);
+        }
+        #menu.hidden { opacity: 0; transform: scale(0.9); pointer-events: none; }
+
+        .btn-start {
+            background: #3b82f6; color: white; border: none;
+            padding: 12px 32px; font-size: 16px; font-weight: bold;
+            border-radius: 8px; cursor: pointer; margin-top: 20px;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+            transition: 0.2s;
+        }
+        .btn-start:hover { transform: scale(1.05); box-shadow: 0 0 40px rgba(59, 130, 246, 0.8); }
+
+        .tagline { color: #94a3b8; font-size: 12px; margin-bottom: 20px; letter-spacing: 1px; }
+
+    </style>
+</head>
+<body>
+
+    <div id="hud">DISTANCE: <span id="score">0</span>m</div>
+
+    <canvas id="game"></canvas>
+
+    <div id="ui">
+        <div id="menu">
+            <h1 class="text-4xl font-extrabold text-white mb-1 italic">GRAVITY JET</h1>
+            <p class="tagline">DATA PACKET ESCAPE PROTOCOL</p>
+            <div id="death-info" class="text-red-500 font-bold mb-2 hidden">CONNECTION LOST</div>
+            <button class="btn-start" onclick="startGame()">INITIATE LAUNCH</button>
+            <p class="mt-4 text-[10px] text-gray-500">CLICK or SPACE to Thrust</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const menu = document.getElementById('menu');
+        const scoreEl = document.getElementById('score');
+        const deathInfo = document.getElementById('death-info');
+
+        // --- CONFIG ---
+        const GRAVITY = 0.5; // Heavy pull
+        const LIFT = -8;     // Powerful thrust
+        const SPEED = 5;     // Scroll speed
+        const SPAWN_RATE = 100; // Frames between pipes
+
+        let state = {
+            running: false,
+            score: 0,
+            frames: 0,
+            player: { x: 100, y: 300, w: 30, h: 30, dy: 0, angle: 0 },
+            walls: [],
+            particles: []
+        };
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if(!state.running) drawStatic();
+        }
+        window.addEventListener('resize', resize);
+
+        function startGame() {
+            state.running = true;
+            state.score = 0;
+            state.frames = 0;
+            state.player = { x: 100, y: canvas.height/2, w: 20, h: 20, dy: 0, angle: 0 };
+            state.walls = [];
+            state.particles = [];
+            
+            scoreEl.innerText = "0";
+            menu.classList.add('hidden');
+            deathInfo.classList.add('hidden');
+            
+            loop();
+        }
+
+        // --- GAME LOOP ---
+        function loop() {
+            if (!state.running) return;
+
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function update() {
+            state.frames++;
+            const p = state.player;
+
+            // Physics
+            p.dy += GRAVITY;
+            p.y += p.dy;
+            
+            // Rotation based on velocity
+            p.angle = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (p.dy * 0.1)));
+
+            // Floor/Ceiling Collision
+            if (p.y + p.h > canvas.height || p.y < 0) gameOver();
+
+            // Spawn Particles (Jet Trail)
+            state.particles.push({
+                x: p.x - 10,
+                y: p.y + p.h/2,
+                vx: (Math.random() - 0.5) * 2 - 4, // Shoot left
+                vy: (Math.random() - 0.5) * 2,
+                life: 1.0,
+                color: `hsl(${Math.random()*60 + 180}, 100%, 50%)` // Cyan/Blue Fire
+            });
+
+            // Update Particles
+            for(let i = state.particles.length - 1; i >= 0; i--) {
+                const part = state.particles[i];
+                part.x += part.vx;
+                part.y += part.vy;
+                part.life -= 0.04;
+                if(part.life <= 0) state.particles.splice(i, 1);
+            }
+
+            // Spawn Walls
+            if (state.frames % SPAWN_RATE === 0) {
+                const gap = 200; // Space between top and bottom
+                const minH = 100;
+                const maxH = canvas.height - gap - minH;
+                const topH = Math.floor(Math.random() * (maxH - minH + 1)) + minH;
+                
+                state.walls.push({
+                    x: canvas.width,
+                    topH: topH,
+                    bottomY: topH + gap,
+                    w: 60,
+                    passed: false
+                });
+            }
+
+            // Update Walls
+            for(let i = state.walls.length - 1; i >= 0; i--) {
+                const w = state.walls[i];
+                w.x -= SPEED;
+
+                // Collision Logic
+                // Horizontal Hit
+                if (p.x + p.w > w.x && p.x < w.x + w.w) {
+                    // Vertical Hit (Top or Bottom)
+                    if (p.y < w.topH || p.y + p.h > w.bottomY) {
+                        gameOver();
+                    }
+                }
+
+                // Score Logic
+                if (w.x + w.w < p.x && !w.passed) {
+                    state.score++;
+                    scoreEl.innerText = state.score;
+                    w.passed = true;
+                }
+
+                // Cleanup
+                if (w.x + w.w < 0) state.walls.splice(i, 1);
+            }
+        }
+
+        function gameOver() {
+            state.running = false;
+            menu.classList.remove('hidden');
+            deathInfo.classList.remove('hidden');
+        }
+
+        // --- RENDER ---
+        function draw() {
+            // Clear & Background Trail
+            ctx.fillStyle = 'rgba(0,0,0,0.5)'; // Slight trails for speed effect
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Particles
+            state.particles.forEach(part => {
+                ctx.fillStyle = part.color;
+                ctx.globalAlpha = part.life;
+                ctx.beginPath();
+                ctx.arc(part.x, part.y, 3, 0, Math.PI*2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+
+            // Draw Walls (Neon Red)
+            ctx.fillStyle = '#ef4444';
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#ef4444';
+            state.walls.forEach(w => {
+                // Top Wall
+                ctx.fillRect(w.x, 0, w.w, w.topH);
+                // Bottom Wall
+                ctx.fillRect(w.x, w.bottomY, w.w, canvas.height - w.bottomY);
+                
+                // Tech Details on Walls
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                ctx.fillRect(w.x + 10, 0, 2, w.topH);
+                ctx.fillRect(w.x + 10, w.bottomY, 2, canvas.height - w.bottomY);
+                ctx.fillStyle = '#ef4444'; // Reset
+            });
+
+            // Draw Player
+            ctx.save();
+            ctx.translate(state.player.x + state.player.w/2, state.player.y + state.player.h/2);
+            ctx.rotate(state.player.angle);
+            
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#3b82f6';
+            ctx.fillStyle = '#fff';
+            
+            // Triangle Ship Shape
+            ctx.beginPath();
+            ctx.moveTo(15, 0); // Nose
+            ctx.lineTo(-10, 10); // Bottom Left
+            ctx.lineTo(-5, 0); // Engine Indent
+            ctx.lineTo(-10, -10); // Top Left
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.restore();
+            ctx.shadowBlur = 0; // Reset
+        }
+
+        function drawStatic() {
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // --- INPUT ---
+        function thrust() {
+            if(state.running) state.player.dy = LIFT;
+        }
+
+        window.addEventListener('mousedown', thrust);
+        window.addEventListener('keydown', (e) => {
+            if(e.code === 'Space') thrust();
+        });
+
+        resize();
+
+    </script>
+</body>
+</html>
