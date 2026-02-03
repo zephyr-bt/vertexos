@@ -8,8 +8,8 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;800&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; background: #050505; font-family: 'JetBrains Mono', monospace; user-select: none; }
-        canvas { display: block; }
+        body { margin: 0; overflow: hidden; background: #050505; font-family: 'JetBrains Mono', monospace; user-select: none; -webkit-tap-highlight-color: transparent; }
+        canvas { display: block; width: 100%; height: 100%; touch-action: none; }
         
         /* UI LAYER */
         #ui {
@@ -27,7 +27,7 @@
 
         /* MENU */
         #menu {
-            background: rgba(10, 10, 10, 0.8); backdrop-filter: blur(20px);
+            background: rgba(10, 10, 10, 0.9); backdrop-filter: blur(20px);
             padding: 40px; border-radius: 20px; border: 1px solid rgba(0, 255, 128, 0.2);
             text-align: center; pointer-events: auto;
             box-shadow: 0 0 50px rgba(0, 255, 128, 0.1);
@@ -37,11 +37,11 @@
 
         .btn-neon {
             background: transparent; border: 2px solid #00ff80; color: #00ff80;
-            padding: 12px 30px; font-weight: 800; font-size: 14px; letter-spacing: 2px;
+            padding: 16px 32px; font-weight: 800; font-size: 16px; letter-spacing: 2px;
             cursor: pointer; transition: 0.2s; margin-top: 20px;
             box-shadow: 0 0 15px rgba(0, 255, 128, 0.2);
         }
-        .btn-neon:hover { background: #00ff80; color: #000; box-shadow: 0 0 40px rgba(0, 255, 128, 0.6); }
+        .btn-neon:active { background: #00ff80; color: #000; box-shadow: 0 0 40px rgba(0, 255, 128, 0.6); transform: scale(0.95); }
 
     </style>
 </head>
@@ -60,7 +60,7 @@
             <p class="text-xs text-green-400/60 mb-6 font-mono">NEON GRID SYSTEM</p>
             <div id="death-msg" class="text-red-500 font-bold mb-4 hidden">SYSTEM FAILURE</div>
             <button class="btn-neon" onclick="startGame()">INITIALIZE</button>
-            <p class="mt-4 text-[10px] text-gray-600">WASD / ARROWS to Move</p>
+            <p class="mt-4 text-[10px] text-gray-600">Swipe or Arrow Keys</p>
         </div>
     </div>
 
@@ -73,7 +73,7 @@
         const deathMsg = document.getElementById('death-msg');
 
         // --- CONFIG ---
-        const TILE = 20; // Size of grid squares
+        const TILE = 20; 
         const COLORS = {
             bg: '#050505',
             grid: '#111',
@@ -88,15 +88,14 @@
             snake: [],
             vel: { x: 0, y: 0 },
             food: { x: 0, y: 0 },
-            nextVel: { x: 0, y: 0 }, // Input buffering
-            speed: 100, // ms per tick
+            nextVel: { x: 0, y: 0 },
+            speed: 100,
             lastTime: 0
         };
 
         function resize() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            // Align to grid
             canvas.width -= canvas.width % TILE;
             canvas.height -= canvas.height % TILE;
             if(!state.running) drawStatic();
@@ -107,10 +106,15 @@
             state.running = true;
             state.score = 0;
             scoreEl.innerText = "0";
+            
+            // Center Snake
+            const startX = Math.floor((canvas.width/TILE)/2) * TILE;
+            const startY = Math.floor((canvas.height/TILE)/2) * TILE;
+            
             state.snake = [
-                { x: 5 * TILE, y: 5 * TILE },
-                { x: 4 * TILE, y: 5 * TILE },
-                { x: 3 * TILE, y: 5 * TILE }
+                { x: startX, y: startY },
+                { x: startX - TILE, y: startY },
+                { x: startX - TILE*2, y: startY }
             ];
             state.vel = { x: TILE, y: 0 };
             state.nextVel = { x: TILE, y: 0 };
@@ -123,72 +127,53 @@
         }
 
         function placeFood() {
-            // Random grid position
             const cols = canvas.width / TILE;
             const rows = canvas.height / TILE;
-            
             state.food = {
                 x: Math.floor(Math.random() * cols) * TILE,
                 y: Math.floor(Math.random() * rows) * TILE
             };
-
-            // Don't spawn on snake
             for(let part of state.snake) {
                 if(part.x === state.food.x && part.y === state.food.y) {
-                    placeFood(); // Try again
-                    break;
+                    placeFood(); break;
                 }
             }
         }
 
-        // --- GAME LOOP ---
         function gameLoop(time) {
             if (!state.running) return;
-
             requestAnimationFrame(gameLoop);
-
-            // Control Game Speed
             if (time - state.lastTime < state.speed) return;
             state.lastTime = time;
-
             update();
             draw();
         }
 
         function update() {
-            // Apply buffered input
             state.vel = state.nextVel;
+            const head = { x: state.snake[0].x + state.vel.x, y: state.snake[0].y + state.vel.y };
 
-            const head = { 
-                x: state.snake[0].x + state.vel.x, 
-                y: state.snake[0].y + state.vel.y 
-            };
-
-            // Wall Collision (Wrap Around or Die? Let's Die for High Stakes)
+            // Wall Collision
             if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
-                gameOver();
-                return;
+                gameOver(); return;
             }
 
             // Self Collision
             for (let part of state.snake) {
                 if (head.x === part.x && head.y === part.y) {
-                    gameOver();
-                    return;
+                    gameOver(); return;
                 }
             }
 
-            state.snake.unshift(head); // Add new head
+            state.snake.unshift(head);
 
-            // Check Food
             if (head.x === state.food.x && head.y === state.food.y) {
                 state.score += 10;
                 scoreEl.innerText = state.score;
-                // Speed up slightly every 50 points
                 if(state.score % 50 === 0 && state.speed > 40) state.speed -= 2;
                 placeFood();
             } else {
-                state.snake.pop(); // Remove tail if no food eaten
+                state.snake.pop();
             }
         }
 
@@ -204,46 +189,29 @@
 
         // --- RENDER ---
         function draw() {
-            // Clear
             ctx.fillStyle = COLORS.bg;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Grid (Subtle)
+            // Grid
             ctx.strokeStyle = COLORS.grid;
             ctx.lineWidth = 1;
             ctx.beginPath();
-            for (let x = 0; x <= canvas.width; x += TILE) {
-                ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height);
-            }
-            for (let y = 0; y <= canvas.height; y += TILE) {
-                ctx.moveTo(0, y); ctx.lineTo(canvas.width, y);
-            }
+            for (let x = 0; x <= canvas.width; x += TILE) { ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); }
+            for (let y = 0; y <= canvas.height; y += TILE) { ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); }
             ctx.stroke();
 
-            // Draw Snake
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = COLORS.snake;
-            ctx.fillStyle = COLORS.snake;
-            
+            // Snake
+            ctx.shadowBlur = 15; ctx.shadowColor = COLORS.snake;
             state.snake.forEach((part, index) => {
-                // Head is brighter
-                if(index === 0) ctx.fillStyle = "#fff";
-                else ctx.fillStyle = COLORS.snake;
-                
-                // Slight gap between segments for style
+                ctx.fillStyle = index === 0 ? "#fff" : COLORS.snake;
                 ctx.fillRect(part.x + 1, part.y + 1, TILE - 2, TILE - 2);
             });
 
-            // Draw Food
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = COLORS.food;
-            ctx.fillStyle = COLORS.food;
+            // Food
+            ctx.shadowBlur = 20; ctx.shadowColor = COLORS.food; ctx.fillStyle = COLORS.food;
             ctx.beginPath();
-            // Circle Food
             ctx.arc(state.food.x + TILE/2, state.food.y + TILE/2, TILE/3, 0, Math.PI * 2);
             ctx.fill();
-
-            // Reset Shadow for next frame efficiency
             ctx.shadowBlur = 0;
         }
 
@@ -252,19 +220,48 @@
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        // --- INPUT ---
+        // --- INPUT: KEYBOARD ---
         window.addEventListener('keydown', e => {
             switch(e.key) {
-                case 'ArrowUp': case 'w': 
-                    if(state.vel.y === 0) state.nextVel = {x: 0, y: -TILE}; break;
-                case 'ArrowDown': case 's': 
-                    if(state.vel.y === 0) state.nextVel = {x: 0, y: TILE}; break;
-                case 'ArrowLeft': case 'a': 
-                    if(state.vel.x === 0) state.nextVel = {x: -TILE, y: 0}; break;
-                case 'ArrowRight': case 'd': 
-                    if(state.vel.x === 0) state.nextVel = {x: TILE, y: 0}; break;
+                case 'ArrowUp': case 'w': if(state.vel.y === 0) state.nextVel = {x: 0, y: -TILE}; break;
+                case 'ArrowDown': case 's': if(state.vel.y === 0) state.nextVel = {x: 0, y: TILE}; break;
+                case 'ArrowLeft': case 'a': if(state.vel.x === 0) state.nextVel = {x: -TILE, y: 0}; break;
+                case 'ArrowRight': case 'd': if(state.vel.x === 0) state.nextVel = {x: TILE, y: 0}; break;
             }
         });
+
+        // --- INPUT: TOUCH SWIPE ---
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, {passive: false});
+
+        document.addEventListener('touchend', e => {
+            let touchEndX = e.changedTouches[0].screenX;
+            let touchEndY = e.changedTouches[0].screenY;
+            handleSwipe(touchEndX, touchEndY);
+        }, {passive: false});
+
+        function handleSwipe(endX, endY) {
+            let diffX = endX - touchStartX;
+            let diffY = endY - touchStartY;
+            
+            // Threshold to prevent accidental tiny taps
+            if (Math.abs(diffX) < 30 && Math.abs(diffY) < 30) return;
+
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                // Horizontal
+                if (diffX > 0 && state.vel.x === 0) state.nextVel = {x: TILE, y: 0}; // Right
+                else if (diffX < 0 && state.vel.x === 0) state.nextVel = {x: -TILE, y: 0}; // Left
+            } else {
+                // Vertical
+                if (diffY > 0 && state.vel.y === 0) state.nextVel = {x: 0, y: TILE}; // Down
+                else if (diffY < 0 && state.vel.y === 0) state.nextVel = {x: 0, y: -TILE}; // Up
+            }
+        }
 
         resize();
     </script>
