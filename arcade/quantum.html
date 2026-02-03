@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Core</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;800&display=swap" rel="stylesheet">
+    <style>
+        body { background: #050505; color: #fff; font-family: 'JetBrains Mono', monospace; user-select: none; overflow: hidden; }
+        
+        /* CORE ANIMATION */
+        .core-container {
+            position: relative; width: 200px; height: 200px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: transform 0.1s;
+        }
+        .core-container:active { transform: scale(0.95); }
+        
+        .core-ring {
+            position: absolute; inset: 0; border: 2px solid rgba(59, 130, 246, 0.3);
+            border-radius: 50%; border-top-color: #3b82f6; border-bottom-color: #3b82f6;
+            animation: spin 4s linear infinite;
+        }
+        .core-ring:nth-child(2) { inset: 20px; border-color: rgba(236, 72, 153, 0.3); border-left-color: #ec4899; border-right-color: #ec4899; animation: spin-rev 6s linear infinite; }
+        .core-center {
+            width: 80px; height: 80px; background: #fff; border-radius: 50%;
+            box-shadow: 0 0 50px #3b82f6; z-index: 10;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes spin-rev { 100% { transform: rotate(-360deg); } }
+
+        /* UPGRADES */
+        .upgrade-item {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            padding: 15px; border-radius: 12px; cursor: pointer; transition: 0.2s;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .upgrade-item:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+        .upgrade-item.disabled { opacity: 0.5; pointer-events: none; }
+
+        /* FLOATING TEXT */
+        .float-text {
+            position: absolute; color: #fff; font-weight: bold; pointer-events: none;
+            animation: floatUp 1s ease-out forwards;
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="flex h-screen">
+
+    <div class="w-1/2 flex flex-col items-center justify-center border-r border-white/10 relative overflow-hidden">
+        <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+        
+        <div class="z-10 text-center mb-10">
+            <div class="text-gray-500 text-xs tracking-widest mb-2">CURRENT BALANCE</div>
+            <div id="balance" class="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-pink-500">0</div>
+            <div class="text-xs text-gray-400 mt-2"><span id="bps">0.0</span> Data / Sec</div>
+        </div>
+
+        <div class="core-container" id="core" onclick="clickCore(event)">
+            <div class="core-ring"></div>
+            <div class="core-ring"></div>
+            <div class="core-center"></div>
+        </div>
+        
+        <div class="mt-12 text-[10px] text-gray-600">CLICK TO MINE</div>
+    </div>
+
+    <div class="w-1/2 bg-[#0a0a0a] flex flex-col">
+        <div class="p-6 border-b border-white/10 flex justify-between items-center">
+            <h2 class="font-bold text-lg">System Upgrades</h2>
+            <button onclick="hardReset()" class="text-[10px] text-red-500 hover:text-red-400">RESET</button>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-6 space-y-3" id="shop-list">
+            </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const core = document.getElementById('core');
+        const balEl = document.getElementById('balance');
+        const bpsEl = document.getElementById('bps');
+        const shopEl = document.getElementById('shop-list');
+
+        // --- GAME STATE ---
+        let game = {
+            data: 0,
+            lifetime: 0,
+            clickPower: 1,
+            generators: [
+                { id: 0, name: "Script Kiddie", cost: 15, income: 0.5, count: 0, icon: "terminal" },
+                { id: 1, name: "Server Node", cost: 100, income: 4, count: 0, icon: "server" },
+                { id: 2, name: "Neural Net", cost: 1100, income: 18, count: 0, icon: "brain-circuit" },
+                { id: 3, name: "Quantum Rig", cost: 12000, income: 65, count: 0, icon: "cpu" },
+                { id: 4, name: "AI Overlord", cost: 130000, income: 300, count: 0, icon: "globe" }
+            ],
+            lastSave: Date.now()
+        };
+
+        // --- LOAD SAVE ---
+        const saved = localStorage.getItem('vertex_quantum');
+        if(saved) {
+            const parsed = JSON.parse(saved);
+            // Merge save with default structure (in case of updates)
+            game = { ...game, ...parsed, generators: game.generators.map((g, i) => ({...g, count: parsed.generators[i]?.count || 0, cost: parsed.generators[i]?.cost || g.cost})) };
+            
+            // Offline Earnings
+            const now = Date.now();
+            const diff = (now - game.lastSave) / 1000;
+            if(diff > 60) {
+                const earned = calculateBPS() * diff;
+                game.data += earned;
+                alert(`Welcome back! You earned ${format(earned)} Data while offline.`);
+            }
+        }
+
+        // --- CORE LOGIC ---
+        function clickCore(e) {
+            addCurrency(game.clickPower);
+            spawnText(e.clientX, e.clientY, `+${format(game.clickPower)}`);
+            
+            // Visual Pop
+            core.style.transform = "scale(0.95)";
+            setTimeout(() => core.style.transform = "scale(1)", 50);
+        }
+
+        function addCurrency(amount) {
+            game.data += amount;
+            game.lifetime += amount;
+            updateUI();
+        }
+
+        function calculateBPS() {
+            return game.generators.reduce((acc, g) => acc + (g.count * g.income), 0);
+        }
+
+        function buy(id) {
+            const gen = game.generators[id];
+            if(game.data >= gen.cost) {
+                game.data -= gen.cost;
+                gen.count++;
+                gen.cost = Math.ceil(gen.cost * 1.15); // Cost Scaling
+                updateUI();
+                renderShop(); // Refresh costs
+            }
+        }
+
+        // --- LOOP ---
+        setInterval(() => {
+            const bps = calculateBPS();
+            if(bps > 0) {
+                addCurrency(bps / 10); // Run 10 times a second for smoothness
+            }
+            game.lastSave = Date.now();
+            saveGame();
+        }, 100);
+
+        function saveGame() {
+            localStorage.setItem('vertex_quantum', JSON.stringify(game));
+        }
+
+        function hardReset() {
+            if(confirm("Wipe all progress?")) {
+                localStorage.removeItem('vertex_quantum');
+                location.reload();
+            }
+        }
+
+        // --- UI ---
+        function format(num) {
+            if(num < 1000) return Math.floor(num);
+            const suffixes = ["k", "M", "B", "T", "Qa"];
+            const suffixNum = Math.floor(("" + Math.floor(num)).length / 3);
+            const shortValue = parseFloat((suffixNum !== 0 ? (num / Math.pow(1000, suffixNum)) : num).toPrecision(3));
+            if (shortValue % 1 !== 0) {
+                return shortValue.toFixed(1) + suffixes[suffixNum - 1];
+            }
+            return shortValue + suffixes[suffixNum - 1];
+        }
+
+        function spawnText(x, y, text) {
+            const el = document.createElement('div');
+            el.className = "float-text";
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+            el.innerText = text;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1000);
+        }
+
+        function renderShop() {
+            shopEl.innerHTML = "";
+            game.generators.forEach((g, i) => {
+                const canAfford = game.data >= g.cost;
+                const div = document.createElement('div');
+                div.className = `upgrade-item ${canAfford ? '' : 'disabled'}`;
+                div.onclick = () => buy(i);
+                div.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
+                            <i data-lucide="${g.icon}" class="w-5 h-5 text-blue-400"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-sm">${g.name}</div>
+                            <div class="text-[10px] text-gray-400">+${format(g.income)}/s</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-mono text-yellow-400">${format(g.cost)}</div>
+                        <div class="text-[10px] text-gray-500">Lvl ${g.count}</div>
+                    </div>
+                `;
+                shopEl.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        function updateUI() {
+            balEl.innerText = format(game.data);
+            bpsEl.innerText = format(calculateBPS());
+            
+            // Efficiently update shop button states without re-rendering DOM
+            const items = document.querySelectorAll('.upgrade-item');
+            game.generators.forEach((g, i) => {
+                if(items[i]) {
+                    if(game.data >= g.cost) items[i].classList.remove('disabled');
+                    else items[i].classList.add('disabled');
+                }
+            });
+        }
+
+        // Init
+        renderShop();
+        updateUI();
+
+    </script>
+</body>
+</html>
