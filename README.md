@@ -1,66 +1,67 @@
-# VERTEX OS 4.0 | Aero Edition 💠
+# VERTEX OS | 5.3 ULTIMATE
 
-![Version](https://img.shields.io/badge/VERSION-4.0.0_AERO-3b82f6?style=for-the-badge)
-![Status](https://img.shields.io/badge/STATUS-STABLE-00ff41?style=for-the-badge)
-![License](https://img.shields.io/badge/LICENSE-MIT-ffffff?style=for-the-badge)
+![Version](https://img.shields.io/badge/VERSION-5.3_ULTIMATE-blue?style=for-the-badge)
+![Status](https://img.shields.io/badge/STATUS-STABLE-success?style=for-the-badge)
+![Engine](https://img.shields.io/badge/ENGINE-VANILLA_JS-yellow?style=for-the-badge)
+![License](https://img.shields.io/badge/LICENSE-MIT-white?style=for-the-badge)
 
 ## 📂 Overview
 
-**Vertex OS 4.0** is a next-generation web-based operating system designed by **Vertex Creative**. It bridges the gap between desktop and web by implementing a full window management system, taskbar logic, and a high-end "Aero" aesthetic inspired by Windows 11 and One UI.
+**Vertex OS** is a high-fidelity, web-based operating system environment built entirely with **HTML5, Tailwind CSS, and Vanilla JavaScript**. 
 
-> **Design Philosophy:** "Glass, Light, and Motion." Every element features real-time acrylic blur (`backdrop-filter`), squircle iconography, and fluid 60FPS animations.
+It features a fully functional Window Manager, persistent local settings, a professional productivity suite, and a dedicated high-performance Arcade ecosystem. It is designed to run in any modern browser with 60 FPS performance.
+
+> **System Core:** No Frameworks. No Dependencies. Pure Code.
 
 ---
 
 ## ✨ System Features
 
 ### 🖥️ Desktop Environment
-* **Mica Effect:** Real-time glassmorphism on windows, taskbars, and menus.
-* **Dynamic Wallpaper:** Background scales and blurs when menus are active (Depth Effect).
-* **Fluid Animations:** All transitions utilize `cubic-bezier` curves for ultra-smooth motion.
+* **Mica Material Design:** Glassmorphism UI with real-time backdrop blurring.
+* **Window Manager:** Drag, drop, minimize, maximize, and focus management (z-index sorting).
+* **Persistence:** Saves your **Wallpaper** and **Username** to the browser's LocalStorage.
+* **Taskbar & Start Menu:** Dynamic app launching and task management.
 
-### 🪟 Window Manager
-* **Multi-Tasking:** Open multiple apps simultaneously.
-* **Controls:** Minimize, Maximize, and Close logic with state memory.
-* **Focus Engine:** Clicking a window brings it to the Z-index foreground.
-* **Drag & Drop:** Physics-based window movement.
+### 🛠️ Productivity Suite (App Directory)
+1.  **Settings:** System control panel (Display, Profile, Reset).
+2.  **AURA:** Studio-grade audio visualizer with frequency analysis.
+3.  **PassForge:** Cryptographically secure password generator.
+4.  **QR-X:** Real-time QR code generator.
+5.  **Lumix Pro:** CSS gradient and color palette designer.
+6.  **Type-X:** Speed typing and keyboard latency tester.
+7.  **RefleX:** Aim training and reaction time calibrator.
+8.  **Gravitas:** Physics-based particle gravity simulation.
+9.  **Kinetix:** Cinematic animation playground.
+10. **SeQ-X:** Memory sequence logic trainer.
 
-### 🚀 Shell Interface
-* **Center Taskbar:** Floating dock with dynamic active indicators.
-* **Start Menu:** Blurred app drawer with "Pinned Apps" and search.
-* **Control Center:** iOS/One UI style quick settings for Wi-Fi, Bluetooth, and Brightness.
-
----
-
-## 📦 The App Ecosystem
-
-Vertex OS comes pre-installed with the **Nexus Suite**, a collection of serverless professional tools:
-
-| App Name | Description | Category |
-| :--- | :--- | :--- |
-| **PassForge** | Military-grade password generator with entropy visualization. | Security |
-| **QR-X** | High-density QR code generator with vector export. | Utility |
-| **Lumix Pro** | Chromatic intelligence engine for color palette generation. | Design |
-| **Type-X** | Gamified WPM typing accelerator and test. | Productivity |
-| **RefleX** | Esports-grade aim and reaction time trainer. | Gaming |
-| **Gravitas** | Particle physics sandbox with Newtonian gravity logic. | Simulation |
-| **Kinetix** | GUI-based CSS keyframe animation generator. | Dev Tool |
+### 🕹️ Vertex Arcade (Gaming Ecosystem)
+* **Cyber Defense:** Strategic Tower Defense engine with economy and pathfinding.
+* **Quantum Core:** Exponential Idle/Clicker game with offline save progression.
+* **Chroma Lab:** Falling sand physics engine (Sand, Water, Fire, Acid logic).
+* **Neon Dash:** Geometry Dash-style auto-runner with particle physics.
+* **Gravity Jet:** High-velocity physics endurance game.
+* **Serpent X:** Neon-grid snake game.
+* **Stack Overflow:** Precision 3D-stacking architecture game.
 
 ---
 
-## 🛠️ Installation & Setup
+## 🚀 Installation & Usage
 
-### Folder Structure
-Ensure your directory looks exactly like this:
+**⚠️ IMPORTANT:** This project requires a local server to function correctly due to browser security policies (CORS) regarding module loading and canvas rendering.
+
+### 1. Folder Structure
+Ensure your directory looks like this:
 ```text
 /VertexOS
-  ├── index.html        (The Main OS File)
+  ├── index.html        (The Kernel)
   ├── README.md
-  └── apps/             (Subfolder containing all tools)
-       ├── passforge.html
-       ├── qrx.html
-       ├── lumix.html
-       ├── typex.html
-       ├── reflex.html
-       ├── gravitas.html
-       └── kinetix.html
+  ├── app/              (Productivity Apps)
+  │    ├── settings.html
+  │    ├── aura.html
+  │    └── ...
+  └── arcade/           (Games)
+       ├── defense.html
+       ├── quantum.html
+       ├── chroma.html
+       └── ...
