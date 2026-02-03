@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serpent X</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;800&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; background: #050505; font-family: 'JetBrains Mono', monospace; user-select: none; }
+        canvas { display: block; }
+        
+        /* UI LAYER */
+        #ui {
+            position: absolute; inset: 0; pointer-events: none;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10;
+        }
+
+        /* SCORE HUD */
+        #hud {
+            position: absolute; top: 20px; left: 20px;
+            display: flex; gap: 20px;
+            font-size: 14px; color: rgba(255,255,255,0.4);
+        }
+        .hud-val { color: #fff; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+
+        /* MENU */
+        #menu {
+            background: rgba(10, 10, 10, 0.8); backdrop-filter: blur(20px);
+            padding: 40px; border-radius: 20px; border: 1px solid rgba(0, 255, 128, 0.2);
+            text-align: center; pointer-events: auto;
+            box-shadow: 0 0 50px rgba(0, 255, 128, 0.1);
+            transition: 0.3s; opacity: 0; transform: scale(0.9); pointer-events: none;
+        }
+        #menu.visible { opacity: 1; transform: scale(1); pointer-events: auto; }
+
+        .btn-neon {
+            background: transparent; border: 2px solid #00ff80; color: #00ff80;
+            padding: 12px 30px; font-weight: 800; font-size: 14px; letter-spacing: 2px;
+            cursor: pointer; transition: 0.2s; margin-top: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 128, 0.2);
+        }
+        .btn-neon:hover { background: #00ff80; color: #000; box-shadow: 0 0 40px rgba(0, 255, 128, 0.6); }
+
+    </style>
+</head>
+<body>
+
+    <div id="hud">
+        <div>SCORE: <span id="score" class="hud-val">0</span></div>
+        <div>HIGH: <span id="high-score" class="hud-val">0</span></div>
+    </div>
+
+    <canvas id="game"></canvas>
+
+    <div id="ui">
+        <div id="menu" class="visible">
+            <h1 class="text-4xl font-bold text-white mb-2 tracking-tighter" style="text-shadow: 0 0 20px #00ff80;">SERPENT X</h1>
+            <p class="text-xs text-green-400/60 mb-6 font-mono">NEON GRID SYSTEM</p>
+            <div id="death-msg" class="text-red-500 font-bold mb-4 hidden">SYSTEM FAILURE</div>
+            <button class="btn-neon" onclick="startGame()">INITIALIZE</button>
+            <p class="mt-4 text-[10px] text-gray-600">WASD / ARROWS to Move</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const menu = document.getElementById('menu');
+        const scoreEl = document.getElementById('score');
+        const highEl = document.getElementById('high-score');
+        const deathMsg = document.getElementById('death-msg');
+
+        // --- CONFIG ---
+        const TILE = 20; // Size of grid squares
+        const COLORS = {
+            bg: '#050505',
+            grid: '#111',
+            snake: '#00ff80',
+            food: '#ff0055'
+        };
+
+        let state = {
+            running: false,
+            score: 0,
+            high: 0,
+            snake: [],
+            vel: { x: 0, y: 0 },
+            food: { x: 0, y: 0 },
+            nextVel: { x: 0, y: 0 }, // Input buffering
+            speed: 100, // ms per tick
+            lastTime: 0
+        };
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            // Align to grid
+            canvas.width -= canvas.width % TILE;
+            canvas.height -= canvas.height % TILE;
+            if(!state.running) drawStatic();
+        }
+        window.addEventListener('resize', resize);
+
+        function startGame() {
+            state.running = true;
+            state.score = 0;
+            scoreEl.innerText = "0";
+            state.snake = [
+                { x: 5 * TILE, y: 5 * TILE },
+                { x: 4 * TILE, y: 5 * TILE },
+                { x: 3 * TILE, y: 5 * TILE }
+            ];
+            state.vel = { x: TILE, y: 0 };
+            state.nextVel = { x: TILE, y: 0 };
+            placeFood();
+            
+            menu.classList.remove('visible');
+            deathMsg.classList.add('hidden');
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        function placeFood() {
+            // Random grid position
+            const cols = canvas.width / TILE;
+            const rows = canvas.height / TILE;
+            
+            state.food = {
+                x: Math.floor(Math.random() * cols) * TILE,
+                y: Math.floor(Math.random() * rows) * TILE
+            };
+
+            // Don't spawn on snake
+            for(let part of state.snake) {
+                if(part.x === state.food.x && part.y === state.food.y) {
+                    placeFood(); // Try again
+                    break;
+                }
+            }
+        }
+
+        // --- GAME LOOP ---
+        function gameLoop(time) {
+            if (!state.running) return;
+
+            requestAnimationFrame(gameLoop);
+
+            // Control Game Speed
+            if (time - state.lastTime < state.speed) return;
+            state.lastTime = time;
+
+            update();
+            draw();
+        }
+
+        function update() {
+            // Apply buffered input
+            state.vel = state.nextVel;
+
+            const head = { 
+                x: state.snake[0].x + state.vel.x, 
+                y: state.snake[0].y + state.vel.y 
+            };
+
+            // Wall Collision (Wrap Around or Die? Let's Die for High Stakes)
+            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+                gameOver();
+                return;
+            }
+
+            // Self Collision
+            for (let part of state.snake) {
+                if (head.x === part.x && head.y === part.y) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            state.snake.unshift(head); // Add new head
+
+            // Check Food
+            if (head.x === state.food.x && head.y === state.food.y) {
+                state.score += 10;
+                scoreEl.innerText = state.score;
+                // Speed up slightly every 50 points
+                if(state.score % 50 === 0 && state.speed > 40) state.speed -= 2;
+                placeFood();
+            } else {
+                state.snake.pop(); // Remove tail if no food eaten
+            }
+        }
+
+        function gameOver() {
+            state.running = false;
+            if(state.score > state.high) {
+                state.high = state.score;
+                highEl.innerText = state.high;
+            }
+            menu.classList.add('visible');
+            deathMsg.classList.remove('hidden');
+        }
+
+        // --- RENDER ---
+        function draw() {
+            // Clear
+            ctx.fillStyle = COLORS.bg;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Grid (Subtle)
+            ctx.strokeStyle = COLORS.grid;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let x = 0; x <= canvas.width; x += TILE) {
+                ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height);
+            }
+            for (let y = 0; y <= canvas.height; y += TILE) {
+                ctx.moveTo(0, y); ctx.lineTo(canvas.width, y);
+            }
+            ctx.stroke();
+
+            // Draw Snake
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = COLORS.snake;
+            ctx.fillStyle = COLORS.snake;
+            
+            state.snake.forEach((part, index) => {
+                // Head is brighter
+                if(index === 0) ctx.fillStyle = "#fff";
+                else ctx.fillStyle = COLORS.snake;
+                
+                // Slight gap between segments for style
+                ctx.fillRect(part.x + 1, part.y + 1, TILE - 2, TILE - 2);
+            });
+
+            // Draw Food
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = COLORS.food;
+            ctx.fillStyle = COLORS.food;
+            ctx.beginPath();
+            // Circle Food
+            ctx.arc(state.food.x + TILE/2, state.food.y + TILE/2, TILE/3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Reset Shadow for next frame efficiency
+            ctx.shadowBlur = 0;
+        }
+
+        function drawStatic() {
+            ctx.fillStyle = COLORS.bg;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // --- INPUT ---
+        window.addEventListener('keydown', e => {
+            switch(e.key) {
+                case 'ArrowUp': case 'w': 
+                    if(state.vel.y === 0) state.nextVel = {x: 0, y: -TILE}; break;
+                case 'ArrowDown': case 's': 
+                    if(state.vel.y === 0) state.nextVel = {x: 0, y: TILE}; break;
+                case 'ArrowLeft': case 'a': 
+                    if(state.vel.x === 0) state.nextVel = {x: -TILE, y: 0}; break;
+                case 'ArrowRight': case 'd': 
+                    if(state.vel.x === 0) state.nextVel = {x: TILE, y: 0}; break;
+            }
+        });
+
+        resize();
+    </script>
+</body>
+</html>
