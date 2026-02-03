@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vertex OS | Enterprise</title>
+    <title>Vertex OS | Ultimate</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -14,13 +14,6 @@
             theme: {
                 extend: {
                     fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
-                    colors: { 
-                        'glass': 'rgba(20, 20, 20, 0.7)',
-                        'accent': '#3b82f6',
-                        'system-red': '#ff453a',
-                        'system-yellow': '#ffd60a',
-                        'system-green': '#32d74b'
-                    },
                     boxShadow: {
                         'glass': '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
                         'glow': '0 0 40px rgba(59, 130, 246, 0.4)'
@@ -44,7 +37,7 @@
         }
         #desktop.blurred { transform: scale(1.05); filter: blur(18px) brightness(0.8); }
 
-        /* MICA MATERIAL (Glass Engine) */
+        /* MICA MATERIAL */
         .mica {
             background: rgba(18, 18, 18, 0.75);
             backdrop-filter: blur(40px) saturate(140%);
@@ -78,32 +71,37 @@
         .win-btn { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; position: relative; transition: 0.2s; }
         .btn-close { background: #ff453a; } .btn-min { background: #ff9f0a; } .btn-max { background: #30d158; }
         .win-controls:hover .btn-close::after { content: '×'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: rgba(0,0,0,0.5); font-weight: 800; }
-        .win-controls:hover .btn-min::after { content: '-'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: rgba(0,0,0,0.5); font-weight: 800; }
-        .win-controls:hover .btn-max::after { content: '+'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: rgba(0,0,0,0.5); font-weight: 800; }
-
+        
         /* START MENU */
         #start-menu {
             position: fixed; bottom: -120%; left: 50%; transform: translateX(-50%);
-            width: 620px; height: 680px; border-radius: 18px;
+            width: 640px; height: 700px; border-radius: 18px;
             display: flex; flex-direction: column; padding: 24px;
             transition: bottom 0.5s cubic-bezier(0.19, 1, 0.22, 1); z-index: 90;
         }
         #start-menu.active { bottom: 90px; }
 
-        .app-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; margin-top: 24px; }
+        .app-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-top: 10px; padding-right: 5px; overflow-y: auto; max-height: 520px; }
+        
+        /* SCROLLBAR */
+        .app-grid::-webkit-scrollbar { width: 4px; }
+        .app-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+
         .app-item {
-            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
             cursor: pointer; padding: 10px; border-radius: 12px; transition: 0.2s;
         }
         .app-item:hover { background: rgba(255,255,255,0.08); transform: translateY(-2px); }
         .app-icon-lg { 
-            width: 54px; height: 54px; border-radius: 16px;
+            width: 48px; height: 48px; border-radius: 14px;
             display: flex; align-items: center; justify-content: center;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            font-size: 24px; color: white;
-            transition: 0.2s;
+            font-size: 24px; color: white; transition: 0.2s;
         }
-        .app-item:hover .app-icon-lg { box-shadow: 0 8px 25px rgba(0,0,0,0.4); }
+        .app-item:hover .app-icon-lg { box-shadow: 0 8px 25px rgba(0,0,0,0.4); transform: scale(1.05); }
+
+        /* SECTION HEADER */
+        .grid-section { grid-column: span 6; font-size: 10px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 2px; margin-top: 10px; margin-bottom: 5px; }
 
         /* TASKBAR */
         .taskbar {
@@ -126,7 +124,7 @@
         }
         .task-icon.active:hover::after { width: 16px; border-radius: 2px; height: 3px; }
 
-        /* TOAST ENGINE */
+        /* TOAST & CONTEXT */
         #toast-area { position: fixed; bottom: 100px; right: 24px; display: flex; flex-direction: column; gap: 12px; z-index: 9999; }
         .toast {
             background: rgba(20, 20, 20, 0.85); backdrop-filter: blur(20px);
@@ -138,7 +136,6 @@
         }
         .toast.show { transform: translateX(0); opacity: 1; }
         
-        /* CONTEXT MENU */
         #context-menu {
             position: absolute; width: 220px; display: none; flex-direction: column;
             border-radius: 12px; padding: 6px; z-index: 9999;
@@ -168,7 +165,7 @@
         <div class="ctx-item" onclick="launch('settings', 'System Control', 'app/settings.html', 700, 500)"><i data-lucide="settings" class="w-4 h-4"></i> System Preferences</div>
         <div class="ctx-item" onclick="openFullscreen()"><i data-lucide="monitor" class="w-4 h-4"></i> Enter Fullscreen</div>
         <div class="h-px bg-white/10 my-1 mx-2"></div>
-        <div class="ctx-item" onclick="showToast('Version 5.3 Enterprise')"><i data-lucide="info" class="w-4 h-4"></i> About Vertex OS</div>
+        <div class="ctx-item" onclick="showToast('Vertex OS 5.3 Ultimate')"><i data-lucide="info" class="w-4 h-4"></i> About Vertex</div>
     </div>
 
     <div id="desktop" onclick="handleDesktopClick(event)"></div>
@@ -176,7 +173,7 @@
     <div class="fixed top-0 w-full h-9 flex justify-between items-center px-5 z-50 pointer-events-none select-none">
         <div class="flex items-center gap-2 pointer-events-auto cursor-pointer hover:opacity-80 transition" onclick="showToast('Vertex Creative Inc.')">
             <span class="text-[11px] font-bold tracking-widest uppercase opacity-80">Vertex</span>
-            <span class="text-[9px] bg-white/10 px-1.5 py-0.5 rounded text-zinc-400">ENT</span>
+            <span class="text-[9px] bg-white/10 px-1.5 py-0.5 rounded text-zinc-400">ULTIMATE</span>
         </div>
         <div class="pointer-events-auto cursor-pointer flex items-center gap-4 bg-black/30 backdrop-blur-md px-4 py-1 rounded-full border border-white/5 hover:bg-black/50 transition active:scale-95 shadow-lg" onclick="toggleSettings(event)">
             <i data-lucide="wifi" class="w-3 h-3"></i>
@@ -188,70 +185,132 @@
     <div id="windows" class="absolute inset-0 overflow-hidden pointer-events-none"></div>
 
     <div id="start-menu" class="mica">
-        <div class="relative mb-6">
+        <div class="relative mb-4">
             <i data-lucide="search" class="absolute left-4 top-3 w-4 h-4 text-gray-500"></i>
-            <input type="text" id="app-search" placeholder="Search applications, files, and settings..." onkeyup="filterApps()" 
+            <input type="text" id="app-search" placeholder="Search applications, games, and files..." onkeyup="filterApps()" 
                    class="w-full bg-black/20 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:bg-black/40 transition text-white placeholder-gray-600">
         </div>
         
-        <div class="flex justify-between items-end mb-2 px-1">
-            <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Pinned</div>
-            <button class="text-[10px] text-blue-400 hover:text-blue-300 transition">All Apps ></button>
-        </div>
-        
         <div class="app-grid" id="app-grid-container">
+            <div class="grid-section">System & Productivity</div>
+            
             <div class="app-item" data-name="settings" onclick="launch('settings', 'System Control', 'app/settings.html', 700, 500)">
                 <div class="app-icon-lg bg-gray-600"><i data-lucide="settings-2"></i></div>
-                <span class="text-[11px] font-medium text-gray-300">Settings</span>
+                <span class="text-[10px] font-medium text-gray-300">Settings</span>
             </div>
 
             <div class="app-item" data-name="aura" onclick="launch('aura', 'AURA Engine', 'app/aura.html', 800, 600)">
                 <div class="app-icon-lg bg-gradient-to-tr from-cyan-500 to-blue-600"><i data-lucide="waves"></i></div>
-                <span class="text-[11px] font-medium text-gray-300">AURA</span>
+                <span class="text-[10px] font-medium text-gray-300">AURA</span>
             </div>
 
             <div class="app-item" data-name="passforge" onclick="launch('passforge', 'PassForge', 'app/passforge.html', 400, 600)">
                 <div class="app-icon-lg bg-blue-600"><i data-lucide="shield-check"></i></div>
-                <span class="text-[11px] font-medium text-gray-300">PassForge</span>
+                <span class="text-[10px] font-medium text-gray-300">PassForge</span>
             </div>
             
             <div class="app-item" data-name="qrx" onclick="launch('qrx', 'QR-X', 'app/qrx.html', 500, 700)">
                 <div class="app-icon-lg bg-rose-600"><i data-lucide="qr-code"></i></div>
-                <span class="text-[11px] font-medium text-gray-300">QR-X</span>
+                <span class="text-[10px] font-medium text-gray-300">QR-X</span>
             </div>
 
             <div class="app-item" data-name="lumix" onclick="launch('lumix', 'Lumix Pro', 'app/lumixpro.html', 900, 650)">
                 <div class="app-icon-lg bg-purple-600"><i data-lucide="palette"></i></div>
-                <span class="text-[11px] font-medium text-gray-300">Lumix</span>
+                <span class="text-[10px] font-medium text-gray-300">Lumix</span>
             </div>
 
             <div class="app-item" data-name="typex" onclick="launch('typex', 'Type-X', 'app/typex.html', 800, 500)">
                 <div class="app-icon-lg bg-green-600"><i data-lucide="keyboard"></i></div>
-                <span class="text-[11px] font-medium text-gray-300">Type-X</span>
+                <span class="text-[10px] font-medium text-gray-300">Type-X</span>
             </div>
 
             <div class="app-item" data-name="reflex" onclick="launch('reflex', 'RefleX', 'app/reflex.html', 800, 600)">
                 <div class="app-icon-lg bg-yellow-500"><i data-lucide="crosshair"></i></div>
-                <span class="text-[11px] font-medium text-gray-300">RefleX</span>
+                <span class="text-[10px] font-medium text-gray-300">RefleX</span>
             </div>
 
             <div class="app-item" data-name="gravitas" onclick="launch('gravitas', 'Gravitas', 'app/gravitas.html', 1000, 700)">
                 <div class="app-icon-lg bg-cyan-600"><i data-lucide="orbit"></i></div>
-                <span class="text-[11px] font-medium text-gray-300">Gravitas</span>
+                <span class="text-[10px] font-medium text-gray-300">Gravitas</span>
             </div>
 
             <div class="app-item" data-name="kinetix" onclick="launch('kinetix', 'Kinetix', 'app/kinetix.html', 1000, 700)">
                 <div class="app-icon-lg bg-indigo-600"><i data-lucide="film"></i></div>
-                <span class="text-[11px] font-medium text-gray-300">Kinetix</span>
+                <span class="text-[10px] font-medium text-gray-300">Kinetix</span>
             </div>
 
             <div class="app-item" data-name="seqx" onclick="launch('seqx', 'SeQ-X', 'app/seqx.html', 500, 600)">
                 <div class="app-icon-lg bg-pink-600"><i data-lucide="brain-circuit"></i></div>
-                <span class="text-[11px] font-medium text-gray-300">SeQ-X</span>
+                <span class="text-[10px] font-medium text-gray-300">SeQ-X</span>
+            </div>
+
+            <div class="grid-section">Vertex Arcade</div>
+
+            <div class="app-item" data-name="defense" onclick="launch('defense', 'Cyber Defense', 'arcade/defense.html', 1000, 700)">
+                <div class="app-icon-lg bg-indigo-900 border border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.4)]">
+                    <i data-lucide="shield-alert" class="text-indigo-400"></i>
+                </div>
+                <span class="text-[10px] font-medium text-gray-300">Defense</span>
+            </div>
+
+            <div class="app-item" data-name="quantum" onclick="launch('quantum', 'Quantum Core', 'arcade/quantum.html', 900, 600)">
+                <div class="app-icon-lg bg-zinc-900 border border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.2)]">
+                    <i data-lucide="cpu" class="text-blue-500"></i>
+                </div>
+                <span class="text-[10px] font-medium text-gray-300">Quantum</span>
+            </div>
+
+            <div class="app-item" data-name="chroma" onclick="launch('chroma', 'Chroma Lab', 'arcade/chroma.html', 600, 700)">
+                <div class="app-icon-lg bg-gradient-to-br from-indigo-500 to-purple-600 shadow-[0_0_15px_rgba(99,102,241,0.5)]">
+                    <i data-lucide="flask-conical" class="text-white"></i>
+                </div>
+                <span class="text-[10px] font-medium text-gray-300">Chroma</span>
+            </div>
+
+            <div class="app-item" data-name="dash" onclick="launch('dash', 'Neon Dash', 'arcade/dash.html', 800, 500)">
+                <div class="app-icon-lg bg-black border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                    <i data-lucide="zap" class="text-yellow-400 fill-current"></i>
+                </div>
+                <span class="text-[10px] font-medium text-gray-300">Dash</span>
+            </div>
+
+            <div class="app-item" data-name="doom" onclick="launch('doom', 'Cyber Wolf', 'arcade/doom.html', 1000, 700)">
+                <div class="app-icon-lg bg-zinc-900 border-2 border-green-500 shadow-[0_0_20px_rgba(0,255,0,0.4)]">
+                    <i data-lucide="crosshair" class="text-green-500"></i>
+                </div>
+                <span class="text-[10px] font-medium text-green-400">Wolf</span>
+            </div>
+
+            <div class="app-item" data-name="drift" onclick="launch('drift', 'Neon Drift', 'arcade/drift.html', 900, 600)">
+                <div class="app-icon-lg bg-gradient-to-r from-purple-600 to-pink-500 shadow-[0_0_15px_rgba(255,0,255,0.4)]">
+                    <i data-lucide="car-front" class="text-white"></i>
+                </div>
+                <span class="text-[10px] font-medium text-gray-300">Drift</span>
+            </div>
+
+            <div class="app-item" data-name="gravity" onclick="launch('gravity', 'Gravity Jet', 'arcade/gravity.html', 800, 500)">
+                <div class="app-icon-lg bg-gradient-to-t from-blue-700 to-cyan-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+                    <i data-lucide="rocket" class="text-white transform rotate-45"></i>
+                </div>
+                <span class="text-[10px] font-medium text-gray-300">Gravity</span>
+            </div>
+
+            <div class="app-item" data-name="serpent" onclick="launch('serpent', 'Serpent X', 'arcade/serpent.html', 600, 600)">
+                <div class="app-icon-lg bg-black border border-green-500/50 shadow-[0_0_15px_rgba(0,255,128,0.3)]">
+                    <i data-lucide="ghost" class="text-green-400"></i>
+                </div>
+                <span class="text-[10px] font-medium text-gray-300">Serpent</span>
+            </div>
+
+            <div class="app-item" data-name="stack" onclick="launch('stack', 'Stack Overflow', 'arcade/stack.html', 500, 800)">
+                <div class="app-icon-lg bg-gradient-to-br from-orange-500 to-red-600 shadow-lg">
+                    <i data-lucide="layers" class="text-white"></i>
+                </div>
+                <span class="text-[10px] font-medium text-gray-300">Stack</span>
             </div>
         </div>
 
-        <div class="mt-auto pt-5 border-t border-white/10 flex items-center justify-between px-2">
+        <div class="mt-auto pt-4 border-t border-white/10 flex items-center justify-between px-2">
             <div class="flex items-center gap-3 hover:bg-white/5 p-2 rounded-xl cursor-pointer transition w-full" onclick="launch('settings', 'System Control', 'app/settings.html', 700, 500)">
                 <div id="user-avatar" class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center"></div>
                 <div>
@@ -329,7 +388,7 @@
                 }, 1000);
             }, 1800);
 
-            // Message Listener (For Settings App)
+            // Message Listener (For Settings/Inter-App)
             window.addEventListener('message', (event) => {
                 if(event.data === 'wall_updated') updateWallpaper();
                 if(event.data === 'user_updated') updateUser();
@@ -474,7 +533,7 @@
             else if (document.exitFullscreen) document.exitFullscreen();
         }
 
-        // --- WINDOW KERNEL (Fixed Restoration Logic) ---
+        // --- WINDOW KERNEL ---
         let zIndex = 100;
         let activeApps = {};
 
@@ -550,7 +609,7 @@
             if(appItem) {
                 srcIcon = appItem.cloneNode(true);
             } else {
-                // Fallback for direct launches
+                // Fallback icon
                 srcIcon = document.createElement('div');
                 srcIcon.className = "w-full h-full bg-gray-600 flex items-center justify-center";
                 srcIcon.innerHTML = `<i data-lucide="app-window" class="w-4 h-4"></i>`;
@@ -647,7 +706,7 @@
             if(!isDragging) return;
             let x = e.clientX - offset.x;
             let y = e.clientY - offset.y;
-            if(y < 0) y = 0; // Top constraint
+            if(y < 0) y = 0;
             dragWin.style.left = `${x}px`;
             dragWin.style.top = `${y}px`;
         }
