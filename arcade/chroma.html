@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chroma Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@800&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; background: #050505; font-family: 'JetBrains Mono', monospace; user-select: none; touch-action: none; }
+        
+        /* THE CANVAS IS SCALED UP */
+        canvas { 
+            display: block; width: 100%; height: 100%; 
+            image-rendering: pixelated; /* Crisp Pixels */
+        }
+
+        /* TOOLBAR */
+        #toolbar {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 8px; padding: 10px;
+            background: rgba(20,20,20,0.9); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px; backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-width: 90vw; overflow-x: auto;
+        }
+
+        .tool {
+            width: 44px; height: 44px; border-radius: 10px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; transition: 0.1s; border: 2px solid transparent;
+            background: #222; position: relative;
+        }
+        .tool:active { transform: scale(0.9); }
+        .tool.active { border-color: #fff; transform: translateY(-4px); box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        
+        /* Color Indicators */
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+
+        /* HEADER */
+        #header {
+            position: absolute; top: 20px; left: 20px; pointer-events: none;
+        }
+        .title { color: white; font-size: 24px; font-weight: 800; letter-spacing: -1px; }
+        .sub { color: #666; font-size: 10px; tracking: 2px; }
+
+    </style>
+</head>
+<body>
+
+    <div id="header">
+        <div class="title">CHROMA LAB</div>
+        <div class="sub">PHYSICS ENGINE v1.0</div>
+        <div class="text-xs text-gray-500 mt-1" id="fps">FPS: 60</div>
+    </div>
+
+    <canvas id="sim"></canvas>
+
+    <div id="toolbar">
+        <div class="tool active" onclick="setTool(1, this)" title="Sand"><div class="dot" style="background:#fcd34d"></div></div>
+        <div class="tool" onclick="setTool(2, this)" title="Water"><div class="dot" style="background:#3b82f6"></div></div>
+        <div class="tool" onclick="setTool(3, this)" title="Stone"><div class="dot" style="background:#6b7280"></div></div>
+        <div class="tool" onclick="setTool(4, this)" title="Wood"><div class="dot" style="background:#78350f"></div></div>
+        <div class="tool" onclick="setTool(5, this)" title="Fire"><div class="dot" style="background:#ef4444"></div></div>
+        <div class="tool" onclick="setTool(6, this)" title="Acid"><div class="dot" style="background:#84cc16"></div></div>
+        <div class="tool" onclick="setTool(0, this)" title="Eraser"><i data-lucide="eraser" class="w-5 h-5 text-white"></i></div>
+        <div class="w-px h-8 bg-white/10 mx-1"></div>
+        <div class="tool" onclick="clearGrid()" title="Clear All"><i data-lucide="trash-2" class="w-5 h-5 text-red-500"></i></div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const canvas = document.getElementById('sim');
+        const ctx = canvas.getContext('2d', { alpha: false }); // Optmized
+        const fpsEl = document.getElementById('fps');
+
+        // --- CONFIG ---
+        // We use a small logic grid (128px wide) scaled up to fit screen
+        // This keeps physics fast on mobile
+        const WIDTH = 128; 
+        const HEIGHT = 128;
+        let scale = 1;
+
+        // --- ELEMENTS ---
+        const EMPTY = 0;
+        const SAND = 1;
+        const WATER = 2;
+        const STONE = 3;
+        const WOOD = 4;
+        const FIRE = 5;
+        const ACID = 6;
+
+        // --- COLORS (Int32 format for speed: ABGR) ---
+        // We manipulate ImageData directly for max performance
+        const COLORS = {
+            [EMPTY]: 0xFF050505, // Background
+            [SAND]:  0xFF4DD3FC, // Yellow-ish (Little Endian: B G R A) -> A=FF B=4D G=D3 R=FC
+            [WATER]: 0xFFF6823B, // Blue
+            [STONE]: 0xFF80726B, // Grey
+            [WOOD]:  0xFF0F3578, // Brown
+            [FIRE]:  0xFF4444EF, // Red
+            [ACID]:  0xFF16CC84  // Lime
+        };
+
+        // --- STATE ---
+        let grid = new Int8Array(WIDTH * HEIGHT); // Stores Type
+        let nextGrid = new Int8Array(WIDTH * HEIGHT); // Double buffer? Actually we modify in place for sand usually, but let's use straightforward logic
+        // For simple JS sand, modifying in place bottom-up is standard.
+        
+        let currentTool = SAND;
+        let isDrawing = false;
+        let mouseX = 0;
+        let mouseY = 0;
+
+        // Image Data for Rendering
+        let imgData = ctx.createImageData(WIDTH, HEIGHT);
+        let buf32 = new Uint32Array(imgData.data.buffer);
+
+        function resize() {
+            // Keep internal resolution, scale visual
+            const aspect = window.innerWidth / window.innerHeight;
+            // canvas.width = WIDTH;
+            // canvas.height = HEIGHT;
+            
+            // To make it look right, we set the canvas internal size to WIDTH/HEIGHT
+            // But CSS scales it up
+            canvas.width = WIDTH;
+            canvas.height = HEIGHT;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // --- PHYSICS ENGINE ---
+        function update() {
+            // Draw Input
+            if(isDrawing) {
+                // Brush size
+                const r = 2; 
+                for(let dy=-r; dy<=r; dy++) {
+                    for(let dx=-r; dx<=r; dx++) {
+                        if(dx*dx + dy*dy <= r*r) {
+                            const x = Math.floor(mouseX) + dx;
+                            const y = Math.floor(mouseY) + dy;
+                            if(x>=0 && x<WIDTH && y>=0 && y<HEIGHT) {
+                                // Don't overwrite Stone if drawing water, etc (optional)
+                                grid[y * WIDTH + x] = currentTool;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // SIMULATION LOOP
+            // Iterate Bottom to Top for falling physics
+            // We randomize X direction to prevent stacking bias
+            
+            for (let y = HEIGHT - 1; y >= 0; y--) {
+                // Randomize X scan direction (L->R or R->L)
+                const dir = Math.random() > 0.5 ? 1 : -1;
+                for (let i = 0; i < WIDTH; i++) {
+                    const x = dir === 1 ? i : (WIDTH - 1 - i);
+                    const idx = y * WIDTH + x;
+                    const type = grid[idx];
+
+                    if (type === EMPTY || type === STONE) continue;
+
+                    if (type === SAND) {
+                        moveSand(idx, x, y);
+                    } else if (type === WATER) {
+                        moveWater(idx, x, y);
+                    } else if (type === ACID) {
+                        moveAcid(idx, x, y);
+                    } else if (type === FIRE) {
+                        moveFire(idx, x, y);
+                    }
+                    // Wood does nothing until burned
+                }
+            }
+        }
+
+        function moveSand(i, x, y) {
+            if (y >= HEIGHT - 1) return; // Bottom
+            
+            const below = i + WIDTH;
+            if (grid[below] === EMPTY || grid[below] === WATER || grid[below] === ACID || grid[below] === FIRE) {
+                // Fall down (swap if liquid/fire)
+                grid[i] = grid[below] === EMPTY ? EMPTY : grid[below];
+                grid[below] = SAND;
+            } else {
+                // Try diagonals
+                const dl = below - 1;
+                const dr = below + 1;
+                const canL = x > 0 && (grid[dl] === EMPTY || grid[dl] === WATER || grid[dl] === ACID);
+                const canR = x < WIDTH - 1 && (grid[dr] === EMPTY || grid[dr] === WATER || grid[dr] === ACID);
+
+                if (canL && canR) {
+                    const pick = Math.random() > 0.5 ? dl : dr;
+                    grid[i] = grid[pick] === EMPTY ? EMPTY : grid[pick];
+                    grid[pick] = SAND;
+                } else if (canL) {
+                    grid[i] = grid[dl] === EMPTY ? EMPTY : grid[dl];
+                    grid[dl] = SAND;
+                } else if (canR) {
+                    grid[i] = grid[dr] === EMPTY ? EMPTY : grid[dr];
+                    grid[dr] = SAND;
+                }
+            }
+        }
+
+        function moveWater(i, x, y) {
+            if (y >= HEIGHT - 1) return;
+
+            const below = i + WIDTH;
+            // Fall Down
+            if (grid[below] === EMPTY || grid[below] === FIRE) {
+                grid[i] = EMPTY;
+                grid[below] = WATER;
+                return;
+            }
+
+            // Flow Sideways
+            const l = i - 1;
+            const r = i + 1;
+            const canL = x > 0 && (grid[l] === EMPTY || grid[l] === FIRE);
+            const canR = x < WIDTH - 1 && (grid[r] === EMPTY || grid[r] === FIRE);
+
+            if (canL && canR) {
+                const pick = Math.random() > 0.5 ? l : r;
+                grid[i] = EMPTY;
+                grid[pick] = WATER;
+            } else if (canL) {
+                grid[i] = EMPTY;
+                grid[l] = WATER;
+            } else if (canR) {
+                grid[i] = EMPTY;
+                grid[r] = WATER;
+            }
+        }
+
+        function moveAcid(i, x, y) {
+            // Acid behaves like water but destroys other elements
+            // Check neighbors
+            const neighbors = [i+WIDTH, i-1, i+1, i+WIDTH-1, i+WIDTH+1];
+            
+            let moved = false;
+            // Random chance to eat neighbor
+            if(Math.random() > 0.1) {
+                for(let n of neighbors) {
+                    if(n >= 0 && n < grid.length) {
+                        const t = grid[n];
+                        if(t !== EMPTY && t !== ACID && t !== STONE) {
+                            grid[n] = Math.random() > 0.5 ? EMPTY : FIRE; // Burn it
+                            grid[i] = Math.random() > 0.9 ? EMPTY : ACID; // Decay acid
+                            moved = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if(!moved) moveWater(i, x, y); // Flow like water if not eating
+        }
+
+        function moveFire(i, x, y) {
+            // Rise up
+            // Random chance to die
+            if (Math.random() > 0.92) {
+                grid[i] = EMPTY;
+                return;
+            }
+            
+            // Burn neighbors
+            const up = i - WIDTH;
+            const l = i - 1;
+            const r = i + 1;
+            const neighbors = [up, l, r];
+
+            for(let n of neighbors) {
+                if(n >= 0 && n < grid.length) {
+                    if(grid[n] === WOOD) {
+                        grid[n] = FIRE; // Ignite wood
+                    } else if (grid[n] === WATER) {
+                        grid[i] = EMPTY; // Water kills fire
+                    }
+                }
+            }
+
+            // Move randomly
+            const move = Math.floor(Math.random() * 3) - 1; // -1, 0, 1
+            const destX = x + move;
+            const destY = y - 1; // Up
+            
+            if(destX >=0 && destX < WIDTH && destY >= 0) {
+                const destIdx = destY * WIDTH + destX;
+                if(grid[destIdx] === EMPTY) {
+                    grid[i] = EMPTY;
+                    grid[destIdx] = FIRE;
+                }
+            }
+        }
+
+        // --- RENDER ---
+        function draw() {
+            // Convert Grid ID to Color
+            for (let i = 0; i < grid.length; i++) {
+                const type = grid[i];
+                if(type === FIRE) {
+                    // flicker fire color
+                    buf32[i] = Math.random() > 0.5 ? 0xFF4444EF : 0xFF2288FF; 
+                } else if (type === WATER) {
+                    // shimmer water
+                    buf32[i] = Math.random() > 0.9 ? 0xFFF6A05B : 0xFFF6823B;
+                } else {
+                    buf32[i] = COLORS[type];
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+            
+            requestAnimationFrame(() => {
+                update();
+                draw();
+            });
+        }
+
+        // --- INPUT ---
+        function setTool(t, el) {
+            currentTool = t;
+            document.querySelectorAll('.tool').forEach(e => e.classList.remove('active'));
+            if(el) el.classList.add('active');
+        }
+
+        function clearGrid() {
+            grid.fill(EMPTY);
+        }
+
+        // Mouse / Touch Logic to map screen coords to low-res grid
+        function updatePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            // Map Screen pixels to Grid pixels
+            mouseX = Math.floor(((clientX - rect.left) / rect.width) * WIDTH);
+            mouseY = Math.floor(((clientY - rect.top) / rect.height) * HEIGHT);
+        }
+
+        canvas.addEventListener('mousedown', e => { isDrawing = true; updatePos(e); });
+        canvas.addEventListener('mousemove', e => { if(isDrawing) updatePos(e); });
+        window.addEventListener('mouseup', () => isDrawing = false);
+
+        canvas.addEventListener('touchstart', e => { isDrawing = true; updatePos(e); e.preventDefault(); }, {passive: false});
+        canvas.addEventListener('touchmove', e => { if(isDrawing) updatePos(e); e.preventDefault(); }, {passive: false});
+        window.addEventListener('touchend', () => isDrawing = false);
+
+        // Start
+        draw();
+
+    </script>
+</body>
+</html>
