@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vertex OS | Ultimate</title>
+    <title>Vertex OS | Enterprise</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -31,19 +31,20 @@
         /* WALLPAPER & OVERLAYS */
         #desktop {
             position: absolute; inset: 0;
-            background: url('https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=2574&auto=format&fit=crop') no-repeat center center;
-            background-size: cover; z-index: 0;
+            background-size: cover; background-position: center; z-index: 0;
             transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.6s, background-image 0.5s ease-in-out;
         }
-        #desktop.blurred { transform: scale(1.05); filter: blur(18px) brightness(0.8); }
+        #desktop.blurred { transform: scale(1.05); filter: blur(20px) brightness(0.7); }
 
-        /* MICA MATERIAL */
+        /* ENTERPRISE MICA MATERIAL */
         .mica {
-            background: rgba(18, 18, 18, 0.75);
-            backdrop-filter: blur(40px) saturate(140%);
-            -webkit-backdrop-filter: blur(40px) saturate(140%);
+            background: rgba(10, 10, 12, 0.75);
+            backdrop-filter: blur(35px) saturate(160%);
+            -webkit-backdrop-filter: blur(35px) saturate(160%);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+            box-shadow: 
+                0 20px 50px -10px rgba(0, 0, 0, 0.8),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.03);
         }
 
         /* WINDOW MANAGER */
@@ -53,7 +54,7 @@
             min-width: 320px; min-height: 200px;
             opacity: 0; transform: scale(0.92) translateY(15px);
             transition: opacity 0.25s, transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-            box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 40px 80px rgba(0,0,0,0.7);
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 40px 80px rgba(0,0,0,0.9);
         }
         .window.open { opacity: 1; transform: scale(1) translateY(0); }
         .window.active { border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 50px 100px rgba(0,0,0,0.8); }
@@ -62,8 +63,8 @@
             height: 42px; display: flex; align-items: center; justify-content: space-between;
             padding: 0 16px; background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.05);
         }
-        .win-content { flex: 1; background: #0a0a0a; position: relative; }
-        .win-content iframe { width: 100%; height: 100%; border: none; background: #0a0a0a; }
+        .win-content { flex: 1; background: #000; position: relative; }
+        .win-content iframe { width: 100%; height: 100%; border: none; background: #000; }
         .drag-shield { position: absolute; inset: 0; display: none; z-index: 50; }
         .window.dragging .drag-shield { display: block; }
 
@@ -75,43 +76,38 @@
         /* START MENU */
         #start-menu {
             position: fixed; bottom: -120%; left: 50%; transform: translateX(-50%);
-            width: 640px; height: 700px; border-radius: 18px;
+            width: 680px; height: 750px; border-radius: 20px;
             display: flex; flex-direction: column; padding: 24px;
             transition: bottom 0.5s cubic-bezier(0.19, 1, 0.22, 1); z-index: 90;
         }
         #start-menu.active { bottom: 90px; }
 
-        .app-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-top: 10px; padding-right: 5px; overflow-y: auto; max-height: 520px; }
-        
-        /* SCROLLBAR */
+        .app-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-top: 5px; padding-right: 5px; overflow-y: auto; max-height: 580px; }
         .app-grid::-webkit-scrollbar { width: 4px; }
         .app-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
 
         .app-item {
             display: flex; flex-direction: column; align-items: center; gap: 8px;
-            cursor: pointer; padding: 10px; border-radius: 12px; transition: 0.2s;
+            cursor: pointer; padding: 12px 6px; border-radius: 12px; transition: 0.2s;
         }
-        .app-item:hover { background: rgba(255,255,255,0.08); transform: translateY(-2px); }
+        .app-item:hover { background: rgba(255,255,255,0.06); transform: translateY(-2px); }
         .app-icon-lg { 
-            width: 48px; height: 48px; border-radius: 14px;
+            width: 52px; height: 52px; border-radius: 16px;
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            font-size: 24px; color: white; transition: 0.2s;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            font-size: 26px; color: white; transition: 0.2s;
         }
-        .app-item:hover .app-icon-lg { box-shadow: 0 8px 25px rgba(0,0,0,0.4); transform: scale(1.05); }
-
-        /* SECTION HEADER */
-        .grid-section { grid-column: span 6; font-size: 10px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 2px; margin-top: 10px; margin-bottom: 5px; }
+        .app-item:hover .app-icon-lg { box-shadow: 0 8px 30px rgba(0,0,0,0.6); transform: scale(1.05); }
 
         /* TASKBAR */
         .taskbar {
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 8px; padding: 8px 12px; border-radius: 16px;
+            display: flex; gap: 8px; padding: 8px 12px; border-radius: 18px;
             z-index: 100; transition: 0.3s;
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
         }
         .task-icon {
-            width: 44px; height: 44px; border-radius: 10px;
+            width: 48px; height: 48px; border-radius: 12px;
             display: flex; align-items: center; justify-content: center;
             cursor: pointer; position: relative; transition: 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
             background: rgba(255,255,255,0.03);
@@ -122,12 +118,12 @@
             content: ''; position: absolute; bottom: 3px; width: 4px; height: 4px;
             background: #60a5fa; border-radius: 50%; box-shadow: 0 0 10px #60a5fa; transition: 0.3s;
         }
-        .task-icon.active:hover::after { width: 16px; border-radius: 2px; height: 3px; }
+        .task-icon.active:hover::after { width: 20px; border-radius: 2px; height: 3px; }
 
         /* TOAST & CONTEXT */
         #toast-area { position: fixed; bottom: 100px; right: 24px; display: flex; flex-direction: column; gap: 12px; z-index: 9999; }
         .toast {
-            background: rgba(20, 20, 20, 0.85); backdrop-filter: blur(20px);
+            background: rgba(20, 20, 20, 0.9); backdrop-filter: blur(20px);
             border: 1px solid rgba(255,255,255,0.1); border-left: 4px solid #3b82f6;
             padding: 14px 18px; border-radius: 10px; min-width: 280px;
             color: #fff; font-size: 13px; font-weight: 500;
@@ -185,17 +181,21 @@
     <div id="windows" class="absolute inset-0 overflow-hidden pointer-events-none"></div>
 
     <div id="start-menu" class="mica">
-        <div class="relative mb-4">
+        <div class="relative mb-2">
             <i data-lucide="search" class="absolute left-4 top-3 w-4 h-4 text-gray-500"></i>
-            <input type="text" id="app-search" placeholder="Search applications, games, and files..." onkeyup="filterApps()" 
+            <input type="text" id="app-search" placeholder="Search ecosystem..." onkeyup="filterApps()" 
                    class="w-full bg-black/20 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:bg-black/40 transition text-white placeholder-gray-600">
         </div>
         
         <div class="app-grid" id="app-grid-container">
-            <div class="grid-section">System & Productivity</div>
+            <div class="col-span-6 flex items-center gap-3 my-2 mt-4">
+                <div class="h-px flex-1 bg-white/10"></div>
+                <span class="text-[10px] font-bold tracking-[0.3em] text-zinc-500 uppercase">Productivity Suite</span>
+                <div class="h-px flex-1 bg-white/10"></div>
+            </div>
             
             <div class="app-item" data-name="settings" onclick="launch('settings', 'System Control', 'app/settings.html', 700, 500)">
-                <div class="app-icon-lg bg-gray-600"><i data-lucide="settings-2"></i></div>
+                <div class="app-icon-lg bg-gray-700"><i data-lucide="settings-2"></i></div>
                 <span class="text-[10px] font-medium text-gray-300">Settings</span>
             </div>
 
@@ -220,7 +220,7 @@
             </div>
 
             <div class="app-item" data-name="typex" onclick="launch('typex', 'Type-X', 'app/typex.html', 800, 500)">
-                <div class="app-icon-lg bg-green-600"><i data-lucide="keyboard"></i></div>
+                <div class="app-icon-lg bg-emerald-600"><i data-lucide="keyboard"></i></div>
                 <span class="text-[10px] font-medium text-gray-300">Type-X</span>
             </div>
 
@@ -244,7 +244,11 @@
                 <span class="text-[10px] font-medium text-gray-300">SeQ-X</span>
             </div>
 
-            <div class="grid-section">Vertex Arcade</div>
+            <div class="col-span-6 flex items-center gap-3 my-2 mt-4">
+                <div class="h-px flex-1 bg-white/10"></div>
+                <span class="text-[10px] font-bold tracking-[0.3em] text-cyan-500/50 uppercase">Vertex Arcade</span>
+                <div class="h-px flex-1 bg-white/10"></div>
+            </div>
 
             <div class="app-item" data-name="defense" onclick="launch('defense', 'Cyber Defense', 'arcade/defense.html', 1000, 700)">
                 <div class="app-icon-lg bg-indigo-900 border border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.4)]">
@@ -265,6 +269,20 @@
                     <i data-lucide="flask-conical" class="text-white"></i>
                 </div>
                 <span class="text-[10px] font-medium text-gray-300">Chroma</span>
+            </div>
+
+            <div class="app-item" data-name="vortex" onclick="launch('vortex', 'Vortex', 'arcade/vortex.html', 700, 700)">
+                <div class="app-icon-lg bg-black border border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.4)]">
+                    <i data-lucide="hexagon" class="text-purple-400"></i>
+                </div>
+                <span class="text-[10px] font-medium text-gray-300">Vortex</span>
+            </div>
+
+            <div class="app-item" data-name="rhythm" onclick="launch('rhythm', 'Rhythm Core', 'arcade/rhythm.html', 600, 800)">
+                <div class="app-icon-lg bg-black border border-cyan-500 shadow-[0_0_15px_rgba(0,255,255,0.4)]">
+                    <i data-lucide="music-2" class="text-cyan-400"></i>
+                </div>
+                <span class="text-[10px] font-medium text-gray-300">Rhythm</span>
             </div>
 
             <div class="app-item" data-name="dash" onclick="launch('dash', 'Neon Dash', 'arcade/dash.html', 800, 500)">
@@ -352,7 +370,7 @@
         const DEFAULT_CONFIG = {
             logo: "https://cdn.discordapp.com/icons/1467910208796758231/fcfe701db117f2cef9e9b8350a1fc8d8.webp?size=1024",
             user: "Guest User",
-            wall: "https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=2574&auto=format&fit=crop"
+            wall: "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=2070&auto=format&fit=crop"
         };
 
         // --- SYSTEM INIT ---
@@ -519,11 +537,26 @@
             else if (document.exitFullscreen) document.exitFullscreen();
         }
 
+        function playSystemSound() {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
         // --- WINDOW KERNEL ---
         let zIndex = 100;
         let activeApps = {};
 
         function launch(key, title, url, w, h) {
+            playSystemSound();
             closeAllMenus();
             
             if (activeApps[key]) {
@@ -595,7 +628,6 @@
             if(appItem) {
                 srcIcon = appItem.cloneNode(true);
             } else {
-                // Fallback icon
                 srcIcon = document.createElement('div');
                 srcIcon.className = "w-full h-full bg-gray-600 flex items-center justify-center";
                 srcIcon.innerHTML = `<i data-lucide="app-window" class="w-4 h-4"></i>`;
