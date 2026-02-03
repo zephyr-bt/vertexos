@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Defense</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@800&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; background: #020205; font-family: 'JetBrains Mono', monospace; user-select: none; }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* UI OVERLAY */
+        #ui { position: absolute; inset: 0; pointer-events: none; }
+
+        /* TOP BAR */
+        #top-bar {
+            position: absolute; top: 0; left: 0; width: 100%; height: 60px;
+            background: rgba(0,0,0,0.8); border-bottom: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: space-between;
+            padding: 0 30px; pointer-events: auto;
+        }
+
+        .stat-box { display: flex; align-items: center; gap: 10px; color: white; font-size: 14px; }
+        .stat-val { font-size: 20px; font-weight: bold; text-shadow: 0 0 10px currentColor; }
+
+        /* BOTTOM SHOP */
+        #shop-bar {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 10px; pointer-events: auto;
+            background: rgba(10,10,10,0.9); padding: 10px; border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .tower-card {
+            width: 70px; height: 90px; border-radius: 10px; background: #1a1a1a;
+            border: 2px solid transparent; cursor: pointer; transition: 0.2s;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: relative; overflow: hidden;
+        }
+        .tower-card:hover { transform: translateY(-5px); background: #252525; }
+        .tower-card.selected { border-color: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.2); background: #333; }
+        .tower-card.too-expensive { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+
+        .t-icon { width: 30px; height: 30px; border-radius: 50%; margin-bottom: 5px; box-shadow: 0 0 10px currentColor; }
+        .t-cost { font-size: 10px; color: #aaa; margin-top: 4px; }
+        .t-name { font-size: 9px; font-weight: bold; color: white; text-transform: uppercase; }
+
+        /* START BUTTON */
+        #start-btn {
+            position: absolute; bottom: 140px; right: 30px; pointer-events: auto;
+            width: 80px; height: 80px; border-radius: 50%;
+            background: #fff; color: #000; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 12px; text-transform: uppercase;
+            box-shadow: 0 0 30px rgba(255,255,255,0.3); transition: 0.2s;
+        }
+        #start-btn:hover { transform: scale(1.1); box-shadow: 0 0 50px rgba(255,255,255,0.6); }
+        #start-btn.disabled { background: #333; color: #555; pointer-events: none; box-shadow: none; }
+
+        /* NOTIFICATIONS */
+        #msg-area {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; pointer-events: none;
+        }
+        .wave-text { font-size: 60px; color: white; font-weight: 800; opacity: 0; transition: 0.5s; text-shadow: 0 0 30px rgba(255,255,255,0.5); }
+        .wave-text.show { opacity: 1; transform: scale(1.2); }
+
+        #game-over {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.9);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: 0.5s; z-index: 50;
+        }
+        #game-over.visible { opacity: 1; pointer-events: auto; }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="game"></canvas>
+
+    <div id="ui">
+        <div id="top-bar">
+            <div class="stat-box text-yellow-400">
+                <i data-lucide="coins" class="w-5 h-5"></i>
+                <div class="stat-val" id="money">100</div>
+            </div>
+            <div class="stat-box text-red-500">
+                <i data-lucide="heart" class="w-5 h-5"></i>
+                <div class="stat-val" id="lives">20</div>
+            </div>
+            <div class="stat-box text-blue-400">
+                <i data-lucide="activity" class="w-5 h-5"></i>
+                <div class="stat-val">WAVE <span id="wave">1</span></div>
+            </div>
+        </div>
+
+        <div id="msg-area">
+            <div class="wave-text" id="wave-msg">WAVE 1</div>
+        </div>
+
+        <button id="start-btn" onclick="nextWave()">
+            NEXT<br>WAVE
+        </button>
+
+        <div id="shop-bar">
+            <div class="tower-card" onclick="selectTower(0)" id="card-0">
+                <div class="t-icon bg-yellow-400 text-yellow-400"></div>
+                <div class="t-name">Blaster</div>
+                <div class="t-cost">50 BITS</div>
+            </div>
+            <div class="tower-card" onclick="selectTower(1)" id="card-1">
+                <div class="t-icon bg-red-500 text-red-500"></div>
+                <div class="t-name">Sniper</div>
+                <div class="t-cost">120 BITS</div>
+            </div>
+            <div class="tower-card" onclick="selectTower(2)" id="card-2">
+                <div class="t-icon bg-cyan-400 text-cyan-400"></div>
+                <div class="t-name">Pulsar</div>
+                <div class="t-cost">250 BITS</div>
+            </div>
+        </div>
+
+        <div id="game-over">
+            <h1 class="text-6xl font-bold text-red-500 mb-4 tracking-tighter">SYSTEM FAILURE</h1>
+            <p class="text-gray-400 mb-8">THE CORE WAS BREACHED</p>
+            <button onclick="location.reload()" class="bg-white text-black px-8 py-3 rounded-full font-bold hover:scale-105 transition">REBOOT SYSTEM</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const uiMoney = document.getElementById('money');
+        const uiLives = document.getElementById('lives');
+        const uiWave = document.getElementById('wave');
+        const waveMsg = document.getElementById('wave-msg');
+        const startBtn = document.getElementById('start-btn');
+        const gameOverScreen = document.getElementById('game-over');
+
+        // --- CONFIG ---
+        const TILE = 60;
+        let MAP_OFFSET_X = 0;
+        let MAP_OFFSET_Y = 0;
+        
+        // --- STATE ---
+        let money = 120;
+        let lives = 20;
+        let wave = 1;
+        let waveActive = false;
+        
+        let path = [];
+        let enemies = [];
+        let towers = [];
+        let projectiles = [];
+        let particles = [];
+        
+        let selectedTower = -1; // -1 = None
+        let spawnQueue = 0;
+        let spawnTimer = 0;
+
+        const TOWER_TYPES = [
+            { name: "Blaster", cost: 50, range: 120, damage: 20, rate: 30, color: "#facc15" }, // Rate = frames between shots
+            { name: "Sniper", cost: 120, range: 300, damage: 100, rate: 90, color: "#ef4444" },
+            { name: "Pulsar", cost: 250, range: 100, damage: 2, rate: 5, color: "#22d3ee" } // Beam weapon
+        ];
+
+        // --- INIT ---
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            generatePath();
+        }
+        window.addEventListener('resize', resize);
+
+        function generatePath() {
+            // Create a simple snake path based on screen size
+            path = [];
+            const cols = Math.floor(canvas.width / TILE);
+            const rows = Math.floor(canvas.height / TILE);
+            
+            // Start Top Left
+            let x = 2; 
+            let y = 2;
+            path.push({x: x*TILE, y: y*TILE});
+
+            // Snake down
+            while(y < rows - 2) {
+                // Go Right
+                x = cols - 3;
+                path.push({x: x*TILE, y: y*TILE});
+                // Go Down
+                y += 2;
+                path.push({x: x*TILE, y: y*TILE});
+                
+                if(y >= rows - 2) break;
+
+                // Go Left
+                x = 2;
+                path.push({x: x*TILE, y: y*TILE});
+                // Go Down
+                y += 2;
+                path.push({x: x*TILE, y: y*TILE});
+            }
+            // End Point
+            path.push({x: x*TILE + (x===2?-TILE:TILE), y: y*TILE}); // Exit screen
+        }
+
+        // --- GAME LOOP ---
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function update() {
+            if(lives <= 0) return;
+
+            // Spawning
+            if(waveActive && spawnQueue > 0) {
+                spawnTimer++;
+                if(spawnTimer > 40) { // Spawn every 40 frames
+                    spawnEnemy();
+                    spawnTimer = 0;
+                    spawnQueue--;
+                }
+            } else if (waveActive && spawnQueue === 0 && enemies.length === 0) {
+                endWave();
+            }
+
+            // Enemies
+            for(let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
+                
+                // Move logic
+                const target = path[e.wp];
+                const dx = target.x - e.x;
+                const dy = target.y - e.y;
+                const dist = Math.hypot(dx, dy);
+                
+                if(dist < e.speed) {
+                    e.x = target.x;
+                    e.y = target.y;
+                    e.wp++;
+                    if(e.wp >= path.length) {
+                        // Reached End
+                        takeDamage(1);
+                        enemies.splice(i, 1);
+                        continue;
+                    }
+                } else {
+                    e.x += (dx / dist) * e.speed;
+                    e.y += (dy / dist) * e.speed;
+                }
+            }
+
+            // Towers
+            towers.forEach(t => {
+                const type = TOWER_TYPES[t.type];
+                t.cooldown--;
+                
+                if(t.cooldown <= 0) {
+                    // Find Target (First enemy in range)
+                    // Sorting by 'progress' (wp) is better, but simple dist check is ok for now
+                    let target = null;
+                    let maxDist = type.range;
+                    
+                    for(const e of enemies) {
+                        const d = Math.hypot(e.x - t.x, e.y - t.y);
+                        if(d < maxDist) {
+                            target = e;
+                            break; // First one found
+                        }
+                    }
+
+                    if(target) {
+                        if(t.type === 2) {
+                            // Pulsar (Continuous Beam / Rapid fire low dmg)
+                             t.cooldown = type.rate;
+                             // Just deal damage directly
+                             target.hp -= type.damage;
+                             spawnParticles(target.x, target.y, 1, type.color);
+                             if(target.hp <= 0) killEnemy(target);
+                             // Draw beam in render phase
+                             t.firingAt = {x: target.x, y: target.y};
+                        } else {
+                            // Projectile
+                            t.cooldown = type.rate;
+                            projectiles.push({
+                                x: t.x, y: t.y,
+                                target: target,
+                                speed: 15,
+                                damage: type.damage,
+                                color: type.color
+                            });
+                        }
+                    } else {
+                        t.firingAt = null;
+                    }
+                }
+            });
+
+            // Projectiles
+            for(let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                if(!enemies.includes(p.target)) {
+                    projectiles.splice(i, 1); // Target dead
+                    continue;
+                }
+                
+                const dx = p.target.x - p.x;
+                const dy = p.target.y - p.y;
+                const dist = Math.hypot(dx, dy);
+
+                if(dist < p.speed) {
+                    // Hit
+                    p.target.hp -= p.damage;
+                    spawnParticles(p.target.x, p.target.y, 3, p.color);
+                    if(p.target.hp <= 0) killEnemy(p.target);
+                    projectiles.splice(i, 1);
+                } else {
+                    p.x += (dx/dist) * p.speed;
+                    p.y += (dy/dist) * p.speed;
+                }
+            }
+
+            // Particles
+            for(let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.05;
+                if(p.life <= 0) particles.splice(i, 1);
+            }
+
+            // UI Update
+            updateUI();
+        }
+
+        function spawnEnemy() {
+            // Enemy health scales with wave
+            enemies.push({
+                x: path[0].x,
+                y: path[0].y,
+                wp: 1,
+                speed: 2 + (wave * 0.2),
+                hp: 40 + (wave * 25),
+                maxHp: 40 + (wave * 25)
+            });
+        }
+
+        function killEnemy(e) {
+            const index = enemies.indexOf(e);
+            if(index > -1) {
+                enemies.splice(index, 1);
+                money += 15;
+                spawnParticles(e.x, e.y, 10, "#fff");
+            }
+        }
+
+        function takeDamage(amt) {
+            lives -= amt;
+            uiLives.innerText = lives;
+            // Screen flash red
+            document.body.style.boxShadow = "inset 0 0 50px red";
+            setTimeout(() => document.body.style.boxShadow = "none", 100);
+            
+            if(lives <= 0) {
+                gameOverScreen.classList.add('visible');
+            }
+        }
+
+        function spawnParticles(x, y, count, color) {
+            for(let i=0; i<count; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 5,
+                    vy: (Math.random() - 0.5) * 5,
+                    life: 1.0, color: color
+                });
+            }
+        }
+
+        // --- WAVE MANAGEMENT ---
+        function nextWave() {
+            if(waveActive) return;
+            waveActive = true;
+            spawnQueue = 5 + Math.floor(wave * 1.5);
+            startBtn.classList.add('disabled');
+            
+            waveMsg.innerText = `WAVE ${wave}`;
+            waveMsg.classList.add('show');
+            setTimeout(() => waveMsg.classList.remove('show'), 2000);
+        }
+
+        function endWave() {
+            waveActive = false;
+            wave++;
+            uiWave.innerText = wave;
+            startBtn.classList.remove('disabled');
+        }
+
+        // --- INTERACTION ---
+        function selectTower(idx) {
+            if(selectedTower === idx) selectedTower = -1; // Toggle off
+            else selectedTower = idx;
+            
+            updateUI();
+        }
+
+        function updateUI() {
+            uiMoney.innerText = money;
+            
+            // Highlight cards
+            for(let i=0; i<3; i++) {
+                const card = document.getElementById(`card-${i}`);
+                if(money < TOWER_TYPES[i].cost) card.classList.add('too-expensive');
+                else card.classList.remove('too-expensive');
+                
+                if(selectedTower === i) card.classList.add('selected');
+                else card.classList.remove('selected');
+            }
+        }
+
+        canvas.addEventListener('mousedown', e => {
+            if(selectedTower === -1) return;
+            
+            // Place Tower
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Snap to Grid (visually nice, not strictly grid bound logic)
+            // Or just place freely? Free placement is cooler but check path collision
+            
+            // Check cost
+            const type = TOWER_TYPES[selectedTower];
+            if(money < type.cost) return;
+
+            // Check distance to path (Don't build ON path)
+            // Simple check: dist to any waypoint line segment
+            // For simplicity in this engine: just check dist to waypoints
+            // A robust engine checks line segments. Let's do a simple proximity check to path nodes for now
+            // Actually, let's just allow placement anywhere for "arcade" fun, unless it's literally on a point
+            
+            towers.push({
+                x: x, y: y,
+                type: selectedTower,
+                cooldown: 0,
+                firingAt: null
+            });
+            
+            money -= type.cost;
+            selectedTower = -1; // Deselect
+            spawnParticles(x, y, 10, type.color);
+        });
+
+        // --- DRAW ---
+        function draw() {
+            // Background Grid
+            ctx.fillStyle = "#020205";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = "rgba(255,255,255,0.03)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for(let x=0; x<canvas.width; x+=TILE) { ctx.moveTo(x,0); ctx.lineTo(x, canvas.height); }
+            for(let y=0; y<canvas.height; y+=TILE) { ctx.moveTo(0,y); ctx.lineTo(canvas.width, y); }
+            ctx.stroke();
+
+            // Path (Neon Line)
+            ctx.strokeStyle = "rgba(50, 100, 255, 0.2)";
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            if(path.length > 0) {
+                ctx.moveTo(path[0].x, path[0].y);
+                for(let i=1; i<path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+            }
+            ctx.stroke();
+            
+            // Path Core Line
+            ctx.strokeStyle = "rgba(100, 200, 255, 0.8)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Towers
+            towers.forEach(t => {
+                const type = TOWER_TYPES[t.type];
+                
+                // Base
+                ctx.fillStyle = "#222";
+                ctx.beginPath(); ctx.arc(t.x, t.y, 15, 0, Math.PI*2); ctx.fill();
+                
+                // Turret Color
+                ctx.fillStyle = type.color;
+                ctx.shadowBlur = 15; ctx.shadowColor = type.color;
+                ctx.beginPath(); ctx.arc(t.x, t.y, 8, 0, Math.PI*2); ctx.fill();
+                ctx.shadowBlur = 0;
+                
+                // Pulsar Beam
+                if(t.type === 2 && t.firingAt) {
+                    ctx.strokeStyle = type.color;
+                    ctx.lineWidth = 2;
+                    ctx.globalAlpha = 0.6;
+                    ctx.beginPath(); ctx.moveTo(t.x, t.y); ctx.lineTo(t.firingAt.x, t.firingAt.y); ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+            });
+
+            // Enemies
+            enemies.forEach(e => {
+                ctx.fillStyle = "#fff";
+                ctx.shadowBlur = 10; ctx.shadowColor = "purple";
+                ctx.beginPath(); ctx.arc(e.x, e.y, 10, 0, Math.PI*2); ctx.fill();
+                ctx.shadowBlur = 0;
+                
+                // Health Bar
+                const hpPct = e.hp / e.maxHp;
+                ctx.fillStyle = "red";
+                ctx.fillRect(e.x - 10, e.y - 20, 20, 4);
+                ctx.fillStyle = "#0f0";
+                ctx.fillRect(e.x - 10, e.y - 20, 20 * hpPct, 4);
+            });
+
+            // Projectiles
+            projectiles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.shadowBlur = 10; ctx.shadowColor = p.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            // Particles
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+
+            // Placement Preview
+            if(selectedTower !== -1) {
+                // We don't have mouse pos here easily without tracking it globally
+                // Skip for simplicity, standard click-to-build
+            }
+        }
+
+        // Init
+        resize();
+        generatePath();
+        loop();
+
+    </script>
+</body>
+</html>
