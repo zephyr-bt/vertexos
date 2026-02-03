@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vortex</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@800&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'JetBrains Mono', monospace; user-select: none; -webkit-tap-highlight-color: transparent; }
+        canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+        /* UI */
+        #ui { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
+
+        #score-time {
+            position: absolute; top: 10%; 
+            font-size: 40px; font-weight: 800; color: white;
+            text-shadow: 0 0 20px rgba(255,255,255,0.5);
+        }
+
+        #menu {
+            pointer-events: auto; text-align: center;
+            background: rgba(0,0,0,0.95); padding: 50px; border-radius: 50%;
+            width: 320px; height: 320px; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            box-shadow: 0 0 60px rgba(255, 255, 255, 0.1);
+            transition: 0.3s; opacity: 0; transform: scale(0.8); pointer-events: none;
+        }
+        #menu.visible { opacity: 1; transform: scale(1); pointer-events: auto; }
+
+        .btn-start {
+            margin-top: 20px; width: 80px; height: 80px; border-radius: 50%;
+            background: #fff; color: #000; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; transition: 0.2s;
+            box-shadow: 0 0 30px rgba(255,255,255,0.5);
+            position: relative; z-index: 50; /* Ensure clickable */
+        }
+        .btn-start:hover { transform: scale(1.1); box-shadow: 0 0 50px rgba(255,255,255,0.8); }
+        .btn-start:active { transform: scale(0.95); }
+
+        #flash {
+            position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; transition: opacity 0.05s; z-index: 50;
+        }
+
+        /* Controls Hint */
+        .controls {
+            position: absolute; bottom: 30px; width: 100%; text-align: center;
+            font-size: 10px; color: rgba(255,255,255,0.3); pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="game"></canvas>
+    <div id="flash"></div>
+
+    <div id="ui">
+        <div id="score-time">0.00</div>
+        
+        <div id="menu" class="visible">
+            <h1 class="text-4xl font-black text-white mb-2 tracking-tighter">VORTEX</h1>
+            <p class="text-gray-400 text-xs tracking-[0.2em]">FOCUS ENGINE</p>
+            <div id="best-time" class="text-blue-400 font-bold mt-2 text-sm">BEST: 0.00</div>
+            <button id="start-btn" class="btn-start" onclick="startGame(event)">
+                <i data-lucide="play" class="w-8 h-8 fill-black text-black"></i>
+            </button>
+        </div>
+        
+        <div class="controls">
+            TAP LEFT / RIGHT TO ROTATE
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score-time');
+        const bestEl = document.getElementById('best-time');
+        const menu = document.getElementById('menu');
+        const flash = document.getElementById('flash');
+
+        // --- CONFIG ---
+        const SIDES = 6; 
+        const ROTATION_SPEED = 0.08;
+        
+        let state = {
+            running: false,
+            time: 0,
+            best: 0,
+            playerAngle: 0,
+            walls: [], 
+            bgAngle: 0,
+            colorHue: 0,
+            speedMod: 1
+        };
+
+        let keys = { left: false, right: false };
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+
+        function startGame(e) {
+            // Important: Stop event from bubbling to touch listeners
+            if(e) e.stopPropagation();
+            
+            state.running = true;
+            state.time = 0;
+            state.playerAngle = 0;
+            state.walls = [];
+            state.bgAngle = 0;
+            state.speedMod = 1;
+            
+            // Reset Keys
+            keys.left = false;
+            keys.right = false;
+            
+            addWall(600);
+            addWall(900);
+            addWall(1200);
+
+            menu.classList.remove('visible');
+            loop();
+        }
+
+        function addWall(dist) {
+            const side = Math.floor(Math.random() * SIDES);
+            const angle = (side / SIDES) * (Math.PI * 2);
+            state.walls.push({
+                distance: dist,
+                gapAngle: angle,
+                speed: 3 + (state.time * 0.05) 
+            });
+        }
+
+        function loop() {
+            if(!state.running) return;
+            
+            state.time += 0.016;
+            state.colorHue += 0.5;
+            state.bgAngle += 0.005; 
+            
+            if(keys.left) state.playerAngle -= ROTATION_SPEED;
+            if(keys.right) state.playerAngle += ROTATION_SPEED;
+
+            for(let i = state.walls.length - 1; i >= 0; i--) {
+                const w = state.walls[i];
+                w.distance -= w.speed * state.speedMod;
+
+                if(w.distance < 50 && w.distance > 30) {
+                    let pA = normalizeAngle(state.playerAngle);
+                    let gA = normalizeAngle(w.gapAngle);
+                    let diff = Math.abs(angleDiff(pA, gA));
+                    
+                    if(diff > 0.4) { 
+                        gameOver();
+                    }
+                }
+
+                if(w.distance < 0) {
+                    state.walls.splice(i, 1);
+                    addWall(800); 
+                }
+            }
+
+            scoreEl.innerText = state.time.toFixed(2);
+            scoreEl.style.color = `hsl(${state.colorHue}, 100%, 70%)`;
+
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function draw() {
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(state.bgAngle); 
+
+            // Center
+            ctx.fillStyle = `hsl(${state.colorHue}, 100%, 50%)`;
+            ctx.beginPath();
+            for(let i=0; i<SIDES; i++) {
+                const a = (i/SIDES) * Math.PI*2;
+                ctx.lineTo(Math.cos(a)*40, Math.sin(a)*40);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = "#000";
+            ctx.beginPath(); ctx.arc(0,0,35,0,Math.PI*2); ctx.fill();
+
+            // Walls
+            state.walls.forEach(w => {
+                ctx.strokeStyle = `hsl(${state.colorHue + (w.distance/5)}, 100%, 50%)`;
+                ctx.lineWidth = 15; 
+                const gapIndex = Math.round((w.gapAngle / (Math.PI*2)) * SIDES);
+                
+                ctx.beginPath();
+                for(let i=0; i<=SIDES; i++) {
+                    const a1 = (i / SIDES) * Math.PI * 2;
+                    const a2 = ((i+1) / SIDES) * Math.PI * 2;
+                    if (i % SIDES !== gapIndex % SIDES) {
+                        ctx.moveTo(Math.cos(a1) * w.distance, Math.sin(a1) * w.distance);
+                        ctx.lineTo(Math.cos(a2) * w.distance, Math.sin(a2) * w.distance);
+                    }
+                }
+                ctx.stroke();
+            });
+
+            // Player
+            ctx.rotate(state.playerAngle);
+            ctx.fillStyle = "#fff";
+            const dist = 60;
+            ctx.beginPath();
+            ctx.moveTo(dist + 10, 0); 
+            ctx.lineTo(dist - 5, 5);
+            ctx.lineTo(dist - 5, -5);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function normalizeAngle(a) {
+            a = a % (Math.PI * 2);
+            if (a < 0) a += Math.PI * 2;
+            return a;
+        }
+        function angleDiff(a, b) {
+            let diff = a - b;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            return diff;
+        }
+
+        function gameOver() {
+            state.running = false;
+            flash.style.opacity = 1;
+            setTimeout(() => flash.style.opacity = 0, 100);
+
+            if(state.time > state.best) {
+                state.best = state.time;
+                bestEl.innerText = `BEST: ${state.best.toFixed(2)}`;
+            }
+            menu.classList.add('visible');
+        }
+
+        // --- INPUT FIX ---
+        window.addEventListener('touchstart', e => {
+            // FIX: If tapping the menu/button, ignore game logic & allow default click
+            if(e.target.closest('#menu') || e.target.closest('.btn-start')) return;
+
+            e.preventDefault(); // Stop scroll
+            const w = window.innerWidth;
+            for(let i=0; i<e.touches.length; i++) {
+                if(e.touches[i].clientX < w/2) keys.left = true;
+                else keys.right = true;
+            }
+        }, {passive: false});
+
+        window.addEventListener('touchend', e => {
+            // Reset keys if no touches remain, or re-evaluate
+            if(e.touches.length === 0) {
+                keys.left = false;
+                keys.right = false;
+            } else {
+                // Re-check remaining touches
+                keys.left = false;
+                keys.right = false;
+                const w = window.innerWidth;
+                for(let i=0; i<e.touches.length; i++) {
+                    if(e.touches[i].clientX < w/2) keys.left = true;
+                    else keys.right = true;
+                }
+            }
+        });
+
+        // Keyboard
+        window.addEventListener('keydown', e => {
+            if(e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+            if(e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+        });
+        window.addEventListener('keyup', e => {
+            if(e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+            if(e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+        });
+
+        resize();
+    </script>
+</body>
+</html>
