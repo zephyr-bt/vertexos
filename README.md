@@ -1,6 +1,6 @@
-# VERTEX OS | 5.3 ULTIMATE
+# VERTEX OS | 5.4 ULTIMATE
 
-![Version](https://img.shields.io/badge/VERSION-5.3_ULTIMATE-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/VERSION-5.4_ULTIMATE-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/STATUS-STABLE-success?style=for-the-badge)
 ![Engine](https://img.shields.io/badge/ENGINE-VANILLA_JS-yellow?style=for-the-badge)
 ![License](https://img.shields.io/badge/LICENSE-MIT-white?style=for-the-badge)
