@@ -1,4 +1,4 @@
-# VERTEX OS | 5.4 ULTIMATE
+# Lucid OS | 5.4 ULTIMATE
 
 ![Version](https://img.shields.io/badge/VERSION-5.4_ULTIMATE-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/STATUS-STABLE-success?style=for-the-badge)
@@ -7,7 +7,7 @@
 
 ## 📂 Overview
 
-**Vertex OS** is a high-fidelity, web-based operating system environment built entirely with **HTML5, Tailwind CSS, and Vanilla JavaScript**. 
+**Lucid OS** is a high-fidelity, web-based operating system environment built entirely with **HTML5, Tailwind CSS, and Vanilla JavaScript**. 
 
 It features a fully functional Window Manager, persistent local settings, a professional productivity suite, and a dedicated high-performance Arcade ecosystem. It is designed to run in any modern browser with 60 FPS performance.
 
